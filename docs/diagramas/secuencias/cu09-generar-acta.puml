@@ -1,0 +1,52 @@
+@startuml
+title ESC-03: Generar acta final de la práctica (CU-09, RN-02, ADR-008, ADR-010)
+
+autonumber
+
+actor "Docente asesor" as doc
+participant "Aplicación web" as web
+participant "API de prácticas" as api
+participant "SSO Institucional" as sso
+database "PostgreSQL" as db
+database "Repositorio de actas PDF" as pdfrepo
+
+doc -> web : Solicita generar acta final de la práctica [HTTPS]
+activate web
+
+web -> api : Invoca generación de acta [POST /practicas/{id}/acta JSON/HTTPS]
+activate api
+
+api -> sso : Valida sesión institucional [OIDC/HTTPS]
+activate sso
+sso --> api : Identidad confirmada (rol = Docente asesor)
+deactivate sso
+
+api -> api : Autorizador RBAC verifica que el docente sea el asesor asignado a la práctica (ADR-005)
+
+api -> db : Consulta Practica, ReglaPrograma vinculada, RegistroHoras y EvaluacionDesempeno [SQL]
+activate db
+db --> api : Datos completos del agregado Practica
+deactivate db
+
+break [Practica.estadoActual != Evaluada o horasAcumuladasAprobadas < ReglaPrograma.horasRequeridas - RN-02]
+    api --> web : 409 Conflict (Transición bloqueada por Máquina de Estados - ADR-010)
+    web --> doc : Informa requisito faltante (horas pendientes o evaluación del supervisor)
+end
+
+api -> api : Renderiza plantilla HTML/CSS de ReglaPrograma a binario PDF\ny calcula huella criptográfica SHA-256 (ADR-008)
+
+api -> pdfrepo : Guarda archivo binario del acta PDF en volumen local [I/O Disco]
+activate pdfrepo
+pdfrepo --> api : Retorna rutaArchivoPdf confirmada
+deactivate pdfrepo
+
+api -> db : Inserta ActaFinal (rutaArchivoPdf, hashIntegridadSha256) e inserta EventoBitacora [SQL]
+activate db
+db --> api : Confirmación SQL
+deactivate db
+
+api --> web : 201 Created (Datos del ActaFinal y hash SHA-256)
+deactivate api
+web --> doc : Muestra previsualización del acta PDF lista para aprobación electrónica
+deactivate web
+@enduml

@@ -1,0 +1,117 @@
+@startuml
+title Vista Lógica - Modelo de Dominio (UML)
+
+hide circle
+hide methods
+skinparam classAttributeIconSize 0
+skinparam class {
+  BackgroundColor #fdfdfd
+  BorderColor #333333
+  HeaderBackgroundColor #e3f2fd
+}
+
+class Estudiante {
+  documento
+  nombreCompleto
+  correoInstitucional
+  programaAcademico
+}
+
+class DocenteAsesor {
+  documento
+  nombreCompleto
+  correoInstitucional
+  cupoMaximoPracticas
+  practicasActivas
+}
+
+class Empresa {
+  nit
+  razonSocial
+  sector
+}
+
+class SupervisorEmpresa {
+  nombreCompleto
+  correoCorporativo
+  cargo
+}
+
+class Practica {
+  fechaPostulacion
+  estadoActual
+  horasAcumuladasAprobadas
+  fechaInicio
+  fechaFin
+}
+
+class ReglaPrograma {
+  programaAcademico
+  version
+  horasRequeridas
+  criteriosRubrica
+  plantillaActa
+  estadoVigencia
+  fechaVigencia
+}
+
+class RegistroHoras {
+  semana
+  cantidadHoras
+  descripcionActividades
+  estadoValidacion
+  fechaRegistro
+}
+
+class EvaluacionDesempeno {
+  calificacionCuantitativa
+  observaciones
+  respuestasRubrica
+  fechaEvaluacion
+}
+
+class TokenEvaluacion {
+  hashToken
+  proposito
+  fechaExpiracion
+  usado
+}
+
+class ActaFinal {
+  numeroActa
+  fechaEmision
+  rutaArchivoPdf
+  hashIntegridadSha256
+  aprobadaPorDocente
+  aprobadaPorCoordinador
+}
+
+class IntentoValidacion {
+  numeroIntento
+  fechaIntento
+  resultadoSia
+  detalleEstado
+}
+
+class EventoBitacora {
+  fechaHora
+  actorIdentificador
+  rolActor
+  ipOrigen
+  accionRealizada
+  entidadAfectada
+  huellaDigital
+}
+
+Estudiante "1" -- "0..*" Practica : postula a >
+DocenteAsesor "0..1" -- "0..*" Practica : asesora >
+Empresa "1" -- "1..*" SupervisorEmpresa : vincula >
+SupervisorEmpresa "1" -- "0..*" Practica : supervisa >
+ReglaPrograma "1" -- "0..*" Practica : rige condiciones de >
+Practica "1" *-- "0..*" RegistroHoras : acumula >
+Practica "1" *-- "0..1" EvaluacionDesempeno : recibe >
+Practica "1" *-- "0..*" TokenEvaluacion : autoriza acceso con >
+Practica "1" *-- "0..1" ActaFinal : formaliza cierre en >
+Practica "1" *-- "0..*" IntentoValidacion : registra verificación en >
+Practica "0..1" -- "0..*" EventoBitacora : deja rastro en >
+@enduml

@@ -1,0 +1,108 @@
+@startuml
+title ESC-01: Postulación de estudiante a la práctica (CU-01, EAC-02, RT-01, ADR-001)
+
+autonumber
+
+actor "Estudiante" as est
+participant "Aplicación web" as web
+participant "API de prácticas" as api
+participant "SSO Institucional" as sso
+database "PostgreSQL" as db
+participant "SIA" as sia
+queue "Broker de mensajes" as broker
+participant "Worker de integración" as worker
+participant "Servicio de correo" as correo
+
+est -> web : Envía formulario de postulación
+activate web
+
+web -> api : Envía solicitud de postulación [POST /postulaciones JSON/HTTPS]
+activate api
+
+api -> sso : Valida token de sesión institucional [OIDC/HTTPS]
+activate sso
+sso --> api : Identidad confirmada (rol = Estudiante)
+deactivate sso
+
+api -> db : Consulta ReglaPrograma activa para el programa del estudiante [SQL]
+activate db
+db --> api : Retorna id_regla vigente (ADR-007)
+deactivate db
+
+api -> sia : Consulta requisitos académicos del estudiante (timeout = 5 s) [REST/HTTPS]
+activate sia
+
+alt [SIA responde en menos de 5 s]
+    sia --> api : Respuesta 200 OK (cumpleRequisitos = true | false)
+    deactivate sia
+
+    break [estudiante NO cumple requisitos académicos]
+        api -> db : Registra Practica (estado = Rechazada) e IntentoValidacion exitoso [SQL]
+        activate db
+        db --> api : Confirmación SQL
+        deactivate db
+        api --> web : 422 Unprocessable Entity (Requisitos incumplidos)
+        web --> est : Muestra causal académica de rechazo (< 3 s)
+    end
+
+    api -> db : Inserta Practica (estado = Solicitada) e IntentoValidacion [SQL]
+    activate db
+    db --> api : Confirmación SQL
+    deactivate db
+
+    api --> web : 201 Created (estado = Solicitada)
+    web --> est : Confirma postulación registrada (< 3 s)
+
+else [SIA no responde (timeout > 5 s) o arroja error 5xx - EAC-02]
+    sia --> api : Error / Timeout (> 5 s)
+    deactivate sia
+
+    api -> api : Activa Circuit Breaker hacia el SIA (ADR-001)
+
+    api -> db : Inserta Practica (estado = PendienteVerificacion) e IntentoValidacion fallido [SQL]
+    activate db
+    db --> api : Confirmación SQL (0% postulaciones perdidas)
+    deactivate db
+
+    api ->> broker : Publica tarea "ValidarRequisitosSIA" (id_practica, doc_estudiante) [AMQP]
+
+    api --> web : 202 Accepted (estado = PendienteVerificacion)
+    deactivate api
+    web --> est : Confirma recepción en pantalla en < 3 s ("Pendiente de verificación")
+    deactivate web
+
+    ... Procesamiento asíncrono en segundo plano (ADR-001) ...
+
+    broker ->> worker : Entrega mensaje "ValidarRequisitosSIA" [AMQP]
+    activate worker
+
+    loop [mientras SIA no responda, máximo 5 reintentos con espera exponencial]
+        worker -> sia : Reintenta consulta de requisitos académicos [REST/HTTPS]
+        activate sia
+        sia --> worker : Resultado de validación (recuperación del SIA < 30 min)
+        deactivate sia
+
+        worker -> db : Inserta IntentoValidacion con resultado del intento [SQL]
+        activate db
+        db --> worker : Confirmación SQL
+        deactivate db
+    end
+
+    alt [SIA confirma requisitos tras recuperación]
+        worker -> db : Actualiza Practica (estado = Solicitada) e inserta EventoBitacora [SQL]
+        activate db
+        db --> worker : Confirmación SQL
+        deactivate db
+
+        worker -> correo : Envía notificación de postulación validada al estudiante [SMTP/TLS]
+        activate correo
+        correo --> worker : Correo aceptado
+        deactivate correo
+
+    else [5 reintentos agotados sin respuesta del SIA]
+        worker ->> broker : Enruta mensaje a Dead-Letter Queue (DLQ) y genera alerta a TI [AMQP]
+    end
+
+    deactivate worker
+end
+@enduml

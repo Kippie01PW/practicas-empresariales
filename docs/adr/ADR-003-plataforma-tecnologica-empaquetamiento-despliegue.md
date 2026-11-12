@@ -38,3 +38,9 @@ Se elige la opción C porque respeta las restricciones presupuestales (RN-05) y 
 ### Riesgos asumidos y sus respectivas mitigaciones
 
 - **El equipo de TI institucional no soporta Docker de forma nativa:** Mitigación mediante el escalamiento del requerimiento técnico en la semana 1 del proyecto y provisión de documentación de despliegue directo alternativo en caso de ser rechazado.
+
+
+## Vistas arquitectónicas afectadas
+
+* [Vista de Procesos](../vistas/02-procesos.md) (`../diagramas/02-procesos.puml`): Selección de motores y herramientas Open Source (`FastAPI`, `RabbitMQ`, `PostgreSQL`).
+* [Vista Física](../vistas/04-fisica.md) (`../diagramas/04-fisica.puml`): Despliegue en contenedores Docker sobre el `Servidor de Aplicaciones Institucional` y el `Servidor de Base de Datos Institucional`.

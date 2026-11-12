@@ -1,0 +1,90 @@
+@startuml
+title Vista Física - Diagrama de Despliegue en Infraestructura Institucional (C4 Despliegue)
+
+skinparam roundCorner 8
+skinparam node {
+  BackgroundColor #ffffff
+  BorderColor #2e6295
+}
+skinparam rectangle {
+  BackgroundColor<<Contenedor>> #438dd5
+  FontColor<<Contenedor>> #ffffff
+  BorderColor<<Contenedor>> #2e6295
+  BackgroundColor<<Externo>> #999999
+  FontColor<<Externo>> #ffffff
+  BorderColor<<Externo>> #6b6b6b
+}
+skinparam database {
+  BackgroundColor<<BD>> #438dd5
+  FontColor<<BD>> #ffffff
+  BorderColor<<BD>> #2e6295
+}
+skinparam queue {
+  BackgroundColor<<Cola>> #438dd5
+  FontColor<<Cola>> #ffffff
+  BorderColor<<Cola>> #2e6295
+}
+
+node "Dispositivo de Usuario Interno\n[PC / Móvil en Campus o Internet]" as pc_interno {
+  rectangle "Navegador Web\n[Chrome / Firefox / Edge]\nEjecuta Aplicación web (SPA)" as nav_int <<Contenedor>>
+}
+
+node "Dispositivo de Supervisor Externo\n[PC Corporativo en Internet]" as pc_externo {
+  rectangle "Navegador Web Externo\n[Cualquier navegador moderno]\nAbre Magic Link sin cuenta (SUP-02)" as nav_ext <<Contenedor>>
+}
+
+node "Centro de Datos Institucional Universidad [Red Local / DMZ On-Premise - RN-01, RT-04]" as dc {
+
+  node "Servidor de Aplicaciones Institucional\n[Linux Ubuntu Server LTS - 4 vCPU, 16 GB RAM (RT-01)]\nDocker Engine autogestionado (ADR-003)" as srv_app {
+
+    node "Contenedor Docker: proxy-web" as dk_web {
+      rectangle "Aplicación web\n[Nginx + estáticos SPA React]\nTerminación TLS 1.3 (RN-01)" as c_web <<Contenedor>>
+    }
+
+    node "Contenedor Docker: api-practicas (4 workers Uvicorn)" as dk_api {
+      rectangle "API de prácticas\n[Python / FastAPI + WeasyPrint]" as c_api <<Contenedor>>
+      rectangle "Script CLI de migración\n[Python CLI - Ejecución única DBA (ADR-009)]" as c_cli <<Contenedor>>
+    }
+
+    node "Contenedor Docker: broker-mensajes" as dk_broker {
+      queue "Broker de mensajes\n[RabbitMQ con volumen persistente]" as c_broker <<Cola>>
+    }
+
+    node "Contenedor Docker: worker-integracion" as dk_worker {
+      rectangle "Worker de integración\n[Python / Celery Worker + Beat]" as c_worker <<Contenedor>>
+    }
+
+    node "Volumen de Disco Cifrado (LUKS)" as vol_pdf {
+      database "Repositorio de actas PDF\n[Sistema de archivos local con backups]" as c_pdf <<BD>>
+    }
+  }
+
+  node "Servidor de Base de Datos Institucional\n[Linux Provisto por TI Universidad - SUP-04, RT-04]" as srv_db {
+    database "PostgreSQL\n[PostgreSQL 16 Open Source (RN-05)]\nUsuario app_practicas: SELECT/INSERT/UPDATE en negocio;\nSOLO INSERT/SELECT en EventoBitacora (ADR-006)" as c_db <<BD>>
+  }
+}
+
+node "Infraestructura de Servicios Universitarios [Red Interna TI]" as red_ti {
+  rectangle "SIA\n[Sistema externo]" as s_sia <<Externo>>
+  rectangle "SSO Institucional\n[Sistema externo]" as s_sso <<Externo>>
+  rectangle "Servicio de correo\n[Sistema externo]" as s_correo <<Externo>>
+}
+
+nav_int --> c_web : Solicita interfaz y envía peticiones [HTTPS / TLS 1.3 : 443]
+nav_ext --> c_web : Accede con token efímero [HTTPS / TLS 1.3 : 443]
+
+c_web --> c_api : Enruta peticiones a API [HTTP interno : 8000]
+c_cli --> c_api : Invoca casos de uso localmente [IPC / Python]
+
+c_api --> c_broker : Publica eventos durables [AMQP : 5672]
+c_broker --> c_worker : Entrega tareas asíncronas [AMQP : 5672]
+
+c_api --> c_pdf : Escribe y lee actas PDF [POSIX File I/O]
+c_api --> c_db : Ejecuta transacciones y registra bitácora [SQL sobre TLS : 5432]
+c_worker --> c_db : Actualiza verificaciones SIA [SQL sobre TLS : 5432]
+
+c_api --> s_sso : Valida tokens de identidad [OIDC / HTTPS : 443]
+c_api --> s_sia : Consulta requisitos (timeout 5s) [REST / HTTPS : 443]
+c_worker --> s_sia : Reintenta validación asíncrona [REST / HTTPS : 443]
+c_worker --> s_correo : Despacha notificaciones y Magic Links [SMTP / TLS : 587]
+@enduml

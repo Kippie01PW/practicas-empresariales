@@ -39,3 +39,9 @@ Se elige la opción B porque aísla el núcleo del negocio de la inestabilidad d
 ### Riesgos asumidos y sus respectivas mitigaciones
 
 - **Ruptura del aislamiento por desarrolladores inyectando repositorios directamente:** Mitigación mediante el uso de herramientas de validación de arquitectura estática (ej. ArchUnit) en la integración continua (CI) que rechacen dependencias ilegales.
+
+
+## Vistas arquitectónicas afectadas
+
+* [Vista de Procesos](../vistas/02-procesos.md) (`../diagramas/02-procesos.puml`): Contenedor único `API de prácticas` como monolito modular.
+* [Vista de Desarrollo](../vistas/03-desarrollo.md) (`../diagramas/03-desarrollo.puml`): División en capas de Clean Architecture (`infraestructura`, `aplicacion`, `dominio`, `main.py`) y vista de usos sin ciclos.

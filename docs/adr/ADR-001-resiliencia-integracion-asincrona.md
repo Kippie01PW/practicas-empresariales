@@ -37,3 +37,12 @@ Se elige la opción B porque satisface integralmente la necesidad de respuesta y
 ### Riesgos asumidos y sus respectivas mitigaciones
 
 - **Acumulación masiva de mensajes si el SIA cae por varios días:** Mitigación mediante la configuración de alertas de longitud de cola y límite de reintentos derivando a una "Dead-Letter Queue" (cola de mensajes fallidos) para revisión del administrador.
+
+
+## Vistas arquitectónicas afectadas
+
+* [Vista Lógica](../vistas/01-logica.md) (`../diagramas/01-logica.puml`): Entidad `IntentoValidacion`.
+* [Vista de Procesos](../vistas/02-procesos.md) (`../diagramas/02-procesos.puml`): Contenedores `Broker de mensajes` y `Worker de integración`.
+* [Vista de Desarrollo](../vistas/03-desarrollo.md) (`../diagramas/03-desarrollo.puml`): Componentes `Adaptador SIA` (con Circuit Breaker) y `Publicador de Eventos`.
+* [Vista Física](../vistas/04-fisica.md) (`../diagramas/04-fisica.puml`): Contenedores Docker `broker-mensajes` y `worker-integracion`.
+* [Escenario ESC-01](../diagramas/secuencias/cu01-postularse.puml): Flujo alterno ante timeout o caída del SIA.

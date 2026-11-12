@@ -39,3 +39,12 @@ Se elige la opción C porque elimina la barrera tecnológica para el actor crít
 ### Riesgos asumidos y sus respectivas mitigaciones
 
 - **El correo con el enlace es reenviado a un tercero:** Mitigación mediante el diseño del enlace como de un solo uso por práctica; adicionalmente, la evaluación queda sujeta a la aprobación final del docente asesor institucional (CU-10).
+
+
+## Vistas arquitectónicas afectadas
+
+* [Contexto del Sistema](../contexto.md) (`../diagramas/contexto.puml`): Interacción del `Supervisor de empresa`, `SSO Institucional` y `Servicio de correo`.
+* [Vista Lógica](../vistas/01-logica.md) (`../diagramas/01-logica.puml`): Entidad `TokenEvaluacion`.
+* [Vista de Procesos](../vistas/02-procesos.md) (`../diagramas/02-procesos.puml`): Validación contra `SSO Institucional` y envío por `Servicio de correo`.
+* [Vista de Desarrollo](../vistas/03-desarrollo.md) (`../diagramas/03-desarrollo.puml`): Componente `Interceptor de Identidad`.
+* [Escenario ESC-02](../diagramas/secuencias/cu07-evaluar-desempeno.puml): Validación y caducidad del Magic Link a los 15 días.

@@ -1,0 +1,71 @@
+@startuml
+title ESC-02: Evaluar desempeño del practicante (CU-07, EAC-03, RN-04, ADR-004, ADR-006)
+
+autonumber
+
+actor "Supervisor de empresa" as sup
+participant "Aplicación web" as web
+participant "API de prácticas" as api
+database "PostgreSQL" as db
+queue "Broker de mensajes" as broker
+participant "Worker de integración" as worker
+participant "Servicio de correo" as correo
+
+sup -> web : Abre enlace de evaluación recibido por correo (Magic Link) [HTTPS]
+activate web
+
+web -> api : Solicita formulario de evaluación con token [GET /evaluaciones/{token} HTTPS]
+activate api
+
+api -> api : Verifica firma criptográfica HMAC del token (ADR-004)
+
+api -> db : Consulta TokenEvaluacion (vigencia <= 15 días y usado = false) [SQL]
+activate db
+db --> api : Datos del TokenEvaluacion
+deactivate db
+
+break [token alterado, ya utilizado o emitido hace más de 15 días - EAC-03]
+    api -> db : Inserta EventoBitacora (accion = "AccesoRechazadoTokenInvalido", IP, fechaHora) [SQL]
+    activate db
+    db --> api : Bitácora registrada en < 1 minuto (ADR-006)
+    deactivate db
+    api --> web : 403 Forbidden (Sin exponer ningún dato del estudiante)
+    web --> sup : Muestra mensaje de enlace expirado o inválido (0 datos expuestos)
+end
+
+api -> db : Consulta Practica y criteriosRubrica de la ReglaPrograma vinculada [SQL]
+activate db
+db --> api : Rubrica de evaluación y nombre del practicante
+deactivate db
+
+api --> web : 200 OK (Formulario de evaluación dinámico)
+deactivate api
+web --> sup : Renderiza rúbrica de desempeño
+deactivate web
+
+sup -> web : Diligencia calificaciones, observaciones y envía evaluación [HTTPS]
+activate web
+
+web -> api : Envía evaluación de desempeño [POST /evaluaciones/{token} JSON/HTTPS]
+activate api
+
+api -> db : Inicia transacción: Inserta EvaluacionDesempeno, marca TokenEvaluacion (usado = true),\ntransiciona Practica (EnEjecucion -> Evaluada, ADR-010) e inserta EventoBitacora [SQL]
+activate db
+db --> api : Transacción confirmada atómicamente
+deactivate db
+
+api ->> broker : Publica evento "EvaluacionRegistrada" (id_practica) [AMQP]
+
+api --> web : 200 OK (Evaluación registrada exitosamente)
+deactivate api
+web --> sup : Muestra comprobante de evaluación completada
+deactivate web
+
+broker ->> worker : Entrega evento "EvaluacionRegistrada" [AMQP]
+activate worker
+worker -> correo : Notifica al Docente asesor que la práctica está lista para generar acta [SMTP/TLS]
+activate correo
+correo --> worker : Correo enviado
+deactivate correo
+deactivate worker
+@enduml

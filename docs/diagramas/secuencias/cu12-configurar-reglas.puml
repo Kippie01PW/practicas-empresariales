@@ -1,0 +1,62 @@
+@startuml
+title ESC-05: Configurar reglas y plantillas por programa (CU-12, EAC-01, SUP-03, ADR-007)
+
+autonumber
+
+actor "Coordinador de prácticas" as coord
+participant "Aplicación web" as web
+participant "API de prácticas" as api
+participant "SSO Institucional" as sso
+database "PostgreSQL" as db
+
+coord -> web : Edita criterios de evaluación, horas o plantilla HTML/CSS del acta [HTTPS]
+activate web
+
+web -> api : Guarda borrador de nueva regla [POST /reglas-programa JSON/HTTPS]
+activate api
+
+api -> sso : Valida sesión institucional [OIDC/HTTPS]
+activate sso
+sso --> api : Identidad confirmada (rol = Coordinador de prácticas)
+deactivate sso
+
+api -> api : Autorizador RBAC verifica permiso exclusivo de Coordinador (ADR-005)
+
+api -> db : Inserta nueva versión de ReglaPrograma (version = N+1, estadoVigencia = Borrador) [SQL]
+activate db
+db --> api : Confirmación SQL (Sin tocar prácticas activas)
+deactivate db
+
+api --> web : 201 Created (Regla en estado Borrador)
+deactivate api
+web --> coord : Muestra borrador creado
+deactivate web
+
+opt [Coordinador solicita simular vista previa antes de activar (Mitigación ADR-007)]
+    coord -> web : Solicita previsualizar acta con datos de prueba [HTTPS]
+    activate web
+    web -> api : Solicita simulación de plantilla [POST /reglas-programa/{id}/simular HTTPS]
+    activate api
+    api -> api : Renderiza plantilla en memoria con Adaptador PDF y Hash (ADR-008)
+    api --> web : 200 OK (PDF de prueba en memoria)
+    deactivate api
+    web --> coord : Muestra previsualización del acta y rúbrica
+    deactivate web
+end
+
+coord -> web : Publica y activa oficialmente la nueva versión de la regla [HTTPS]
+activate web
+
+web -> api : Activa regla para nuevas postulaciones [PUT /reglas-programa/{id}/activar HTTPS]
+activate api
+
+api -> db : Marca versión anterior como Histórica, activa versión N+1 (estadoVigencia = Activo)\ne inserta EventoBitacora (Las prácticas en curso conservan su id_regla anterior - EAC-01) [SQL]
+activate db
+db --> api : Transacción confirmada (0% alteración en actas o prácticas previas)
+deactivate db
+
+api --> web : 200 OK (Nueva regla vigente desplegada en < 16 h-hombre sin tocar código)
+deactivate api
+web --> coord : Confirma activación para las siguientes postulaciones
+deactivate web
+@enduml
