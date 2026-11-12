@@ -38,3 +38,9 @@ Se elige la opción B porque garantiza que la política de privacidad y autoriza
 ### Riesgos asumidos y sus respectivas mitigaciones
 
 - **Olvidar asignar permisos a un caso de uso nuevo:** Mitigación mediante la adopción de una política deny-by-default, de modo que una ruta o caso de uso sin rol configurado explícitamente arroje siempre error de autorización (HTTP 403).
+
+
+## Vistas arquitectónicas afectadas
+
+* [Vista de Desarrollo](../vistas/03-desarrollo.md) (`../diagramas/03-desarrollo.puml`): Componente `Autorizador RBAC` centralizado en la capa de Aplicación.
+* [Escenario ESC-04](../diagramas/secuencias/cu10-aprobar-acta.puml) y [Escenario ESC-05](../diagramas/secuencias/cu12-configurar-reglas.puml).

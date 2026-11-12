@@ -1,0 +1,75 @@
+@startuml
+title Vista de Desarrollo - Componentes de "API de prácticas" y Vista de Usos sin Ciclos (C4 Nivel 3)
+
+skinparam roundCorner 8
+skinparam packageStyle rectangle
+
+package "Contenedor: API de prácticas [Monolito Modular - Clean Architecture]" {
+
+  package "Composición (Bootstrap)" #f5f5f5 {
+    component "main.py\n[Composición e Inyección]\nConecta adaptadores con puertos y casos de uso" as main
+  }
+
+  package "Capa de Infraestructura (Adaptadores Primarios y Secundarios)" #e3f2fd {
+    component "Controlador REST\n[Adaptador Primario: FastAPI]\nExpone endpoints HTTPS" as rest
+    component "Interceptor de Identidad\n[Adaptador Seguridad]\nValida SSO y Magic Links HMAC (ADR-004)" as auth
+    component "Adaptador PostgreSQL\n[Adaptador Secundario: SQLAlchemy]\nPersistencia SQL y Bitácora Append-Only (ADR-006)" as pg_adapter
+    component "Adaptador SIA\n[Adaptador Secundario: HTTP Client + Circuit Breaker]\nConsume API del SIA con timeout 5s (ADR-001)" as sia_adapter
+    component "Publicador de Eventos\n[Adaptador Secundario: Pika AMQP]\nPublica en Broker de mensajes (ADR-001)" as amqp_adapter
+    component "Adaptador PDF y Hash\n[Adaptador Secundario: Jinja2 + WeasyPrint + SHA-256]\nRenderiza plantilla HTML a PDF y sella (ADR-008)" as pdf_adapter
+  }
+
+  package "Capa de Aplicación (Casos de Uso, Autorización y Puertos) - Vista de Usos sin Ciclos" #fff9c4 {
+    component "Autorizador RBAC\n[Componente Transversal]\nValida rol y pertenencia deny-by-default (ADR-005)" as rbac
+    component "Módulo Actas\n[Casos de uso: CU-09, CU-10, CU-14]\nGeneración, firma electrónica y consolidados" as mod_actas
+    component "Módulo Seguimiento y Evaluación\n[Casos de uso: CU-04, CU-05, CU-06, CU-07, CU-08]\nHoras semanales y evaluación externa" as mod_eval
+    component "Módulo Postulaciones\n[Casos de uso: CU-01, CU-02, CU-03, CU-11, CU-13, CU-15]\nPostulación, aprobación, asignación tutor y migración" as mod_post
+    component "Módulo Reglas\n[Caso de uso: CU-12]\nParametrización declarativa versionada (ADR-007)" as mod_reglas
+    component "Puertos de Salida\n[Interfaces Abstractas]\nContratos para BD, SIA, Broker, Correo y PDF" as puertos
+  }
+
+  package "Capa de Dominio (Entidades y Reglas de Negocio Puras)" #e8f5e9 {
+    component "Núcleo de Dominio\n[Entidades y Máquina de Estados Finitos]\nPractica (State Machine ADR-010), Estudiante, DocenteAsesor,\nReglaPrograma, RegistroHoras, EvaluacionDesempeno,\nTokenEvaluacion, ActaFinal, IntentoValidacion, EventoBitacora" as dominio
+  }
+}
+
+' Composición
+main ..> rest : configura
+main ..> pg_adapter : inyecta en puertos
+main ..> sia_adapter : inyecta en puertos
+main ..> amqp_adapter : inyecta en puertos
+main ..> pdf_adapter : inyecta en puertos
+
+' Flujo de entrada en Infraestructura -> Aplicación
+rest --> auth : 1. autentica petición (SSO o Token)
+auth --> rbac : 2. entrega identidad verificada
+rbac --> mod_actas : autoriza ejecución
+rbac --> mod_eval : autoriza ejecución
+rbac --> mod_post : autoriza ejecución
+rbac --> mod_reglas : autoriza ejecución
+
+' Vista de usos entre módulos de aplicación (DAG sin ciclos)
+mod_actas --> mod_eval : usa (verifica horas y evaluación completas)
+mod_eval --> mod_post : usa (consulta práctica activa y actores)
+mod_post --> mod_reglas : usa (obtiene versión vigente de regla)
+mod_actas --> mod_reglas : usa (obtiene plantilla de acta y rúbrica)
+
+' Uso de puertos y dominio (Regla de dependencia hacia adentro)
+mod_actas --> puertos : invoca contratos
+mod_eval --> puertos : invoca contratos
+mod_post --> puertos : invoca contratos
+mod_reglas --> puertos : invoca contratos
+
+mod_actas --> dominio : opera sobre entidades
+mod_eval --> dominio : opera sobre entidades
+mod_post --> dominio : opera sobre entidades
+mod_reglas --> dominio : opera sobre entidades
+
+puertos --> dominio : referencia entidades
+
+' Implementación de puertos (Inversión de dependencias)
+pg_adapter ..|> puertos : implementa persistencia y bitácora
+sia_adapter ..|> puertos : implementa consulta SIA
+amqp_adapter ..|> puertos : implementa cola asíncrona
+pdf_adapter ..|> puertos : implementa generación PDF
+@enduml

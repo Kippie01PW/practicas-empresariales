@@ -1,0 +1,40 @@
+@startuml
+title Contexto del Sistema - Sistema de Gestión de Prácticas Empresariales (C4 Nivel 1)
+
+skinparam roundCorner 10
+skinparam rectangle {
+  BackgroundColor<<Sistema>> #1168bd
+  FontColor<<Sistema>> #ffffff
+  BorderColor<<Sistema>> #0b4884
+  BackgroundColor<<Externo>> #999999
+  FontColor<<Externo>> #ffffff
+  BorderColor<<Externo>> #6b6b6b
+}
+skinparam actor {
+  BackgroundColor #08427b
+  FontColor #08427b
+  BorderColor #0b4884
+}
+
+actor "Estudiante\n[Persona]" as est
+actor "Coordinador de prácticas\n[Persona]" as coord
+actor "Docente asesor\n[Persona]" as doc
+actor "Supervisor de empresa\n[Persona]" as sup
+actor "Administrador DBA\n[Persona]" as dba
+
+rectangle "Sistema de Gestión de\nPrácticas Empresariales\n[Sistema de software]\nGestiona postulaciones, seguimiento de horas,\nevaluaciones y emisión de actas finales" as sis <<Sistema>>
+
+rectangle "SIA\n[Sistema externo]\nRegistro Académico institucional" as sia <<Externo>>
+rectangle "SSO Institucional\n[Sistema externo]\nDirectorio activo universitario" as sso <<Externo>>
+rectangle "Servicio de correo\n[Sistema externo]\nServidor SMTP institucional" as correo <<Externo>>
+
+est --> sis : Postula a práctica, registra horas\ny consulta estado [HTTPS]
+coord --> sis : Aprueba postulaciones, asigna tutores,\nconfigura reglas y firma actas [HTTPS]
+doc --> sis : Revisa horas de practicantes\ny aprueba actas finales [HTTPS]
+sup --> sis : Valida horas semanales y evalúa\ndesempeño mediante enlace seguro [HTTPS]
+dba --> sis : Ejecuta migración inicial de\nprácticas activas desde plantilla Excel [CLI]
+
+sis --> sia : Consulta requisitos académicos\ndel estudiante [REST / HTTPS]
+sis --> sso : Autentica usuarios internos\ninstitucionales [OIDC / HTTPS]
+sis --> correo : Envía recordatorios, notificaciones\ny enlaces efímeros [SMTP / TLS]
+@enduml

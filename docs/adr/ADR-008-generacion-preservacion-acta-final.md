@@ -39,3 +39,12 @@ Se elige la opción C porque automatiza integralmente la emisión (OB-01), blind
 ### Riesgos asumidos y sus respectivas mitigaciones
 
 - **Corrupción o pérdida del archivo PDF almacenado en disco:** Mitigación asegurando que, mientras la información de la base de datos permanezca intacta, el sistema puede regenerar el archivo, y el hash almacenado certificará que es idéntico e íntegro respecto al original emitido.
+
+
+## Vistas arquitectónicas afectadas
+
+* [Vista Lógica](../vistas/01-logica.md) (`../diagramas/01-logica.puml`): Entidad `ActaFinal` (`hashIntegridadSha256`).
+* [Vista de Procesos](../vistas/02-procesos.md) (`../diagramas/02-procesos.puml`): Contenedor `Repositorio de actas PDF`.
+* [Vista de Desarrollo](../vistas/03-desarrollo.md) (`../diagramas/03-desarrollo.puml`): Componentes `Módulo Actas` y `Adaptador PDF y Hash`.
+* [Vista Física](../vistas/04-fisica.md) (`../diagramas/04-fisica.puml`): Almacenamiento en `Volumen de Disco Cifrado (LUKS)`.
+* [Escenario ESC-03](../diagramas/secuencias/cu09-generar-acta.puml) y [Escenario ESC-04](../diagramas/secuencias/cu10-aprobar-acta.puml).

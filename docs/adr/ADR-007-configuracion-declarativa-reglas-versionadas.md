@@ -38,3 +38,10 @@ Se elige la opción B porque empodera al coordinador de prácticas (CU-12) mante
 ### Riesgos asumidos y sus respectivas mitigaciones
 
 - **Configuración errónea publicada en producción por error humano:** Mitigación mediante la integración de estados en la regla (Borrador -> Activo), permitiendo simular y previsualizar el impacto antes de activarla oficialmente.
+
+
+## Vistas arquitectónicas afectadas
+
+* [Vista Lógica](../vistas/01-logica.md) (`../diagramas/01-logica.puml`): Entidad `ReglaPrograma` asociada a `Practica`.
+* [Vista de Desarrollo](../vistas/03-desarrollo.md) (`../diagramas/03-desarrollo.puml`): Componente `Módulo Reglas` y su relación de uso desde `Módulo Postulaciones` y `Módulo Actas`.
+* [Escenario ESC-05](../diagramas/secuencias/cu12-configurar-reglas.puml): Creación en borrador, simulación y activación sin afectar cohortes en curso.

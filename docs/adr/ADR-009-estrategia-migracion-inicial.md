@@ -38,3 +38,11 @@ Se elige la opción C porque es la única que respeta la priorización de esfuer
 ### Riesgos asumidos y sus respectivas mitigaciones
 
 - **Rechazo de registros el día del paso a producción por inconsistencias:** Mitigación ejecutando el script CLI en modo "Dry Run" (solo validación, sin guardar) semanas previas, emitiendo reportes de advertencia a los docentes para que realicen las correcciones pertinentes con anticipación.
+
+
+## Vistas arquitectónicas afectadas
+
+* [Contexto del Sistema](../contexto.md) (`../diagramas/contexto.puml`): Actor `Administrador DBA` interactuando vía CLI.
+* [Vista de Procesos](../vistas/02-procesos.md) (`../diagramas/02-procesos.puml`): Contenedor `Script CLI de migración`.
+* [Vista de Desarrollo](../vistas/03-desarrollo.md) (`../diagramas/03-desarrollo.puml`): Reutilización de casos de uso en `Módulo Postulaciones`.
+* [Vista Física](../vistas/04-fisica.md) (`../diagramas/04-fisica.puml`): Ejecución del `Script CLI de migración` dentro del contenedor `api-practicas`.

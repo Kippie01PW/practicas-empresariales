@@ -40,3 +40,12 @@ Se elige la opción B porque garantiza la atomicidad y trazabilidad requerida po
 ### Riesgos asumidos y sus respectivas mitigaciones
 
 - **Manipulación directa de la bitácora por un DBA mediante SQL:** Mitigación configurando el usuario de la base de datos asignado a la aplicación con permisos exclusivos de `INSERT` (sin privilegios de `UPDATE` ni `DELETE` sobre dicha tabla), delegando los controles a nivel de motor (RT-04).
+
+
+## Vistas arquitectónicas afectadas
+
+* [Vista Lógica](../vistas/01-logica.md) (`../diagramas/01-logica.puml`): Entidad `EventoBitacora`.
+* [Vista de Procesos](../vistas/02-procesos.md) (`../diagramas/02-procesos.puml`): Almacenamiento transaccional en `PostgreSQL`.
+* [Vista de Desarrollo](../vistas/03-desarrollo.md) (`../diagramas/03-desarrollo.puml`): Escritura desde `Adaptador PostgreSQL`.
+* [Vista Física](../vistas/04-fisica.md) (`../diagramas/04-fisica.puml`): Restricción de permisos a solo `INSERT`/`SELECT` sobre `EventoBitacora` en el `Servidor de Base de Datos Institucional`.
+* [Escenario ESC-02](../diagramas/secuencias/cu07-evaluar-desempeno.puml) y [Escenario ESC-04](../diagramas/secuencias/cu10-aprobar-acta.puml).

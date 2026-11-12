@@ -1,0 +1,75 @@
+@startuml
+title Vista de Procesos - Diagrama de Contenedores (C4 Nivel 2)
+
+skinparam roundCorner 10
+skinparam rectangle {
+  BackgroundColor<<Contenedor>> #438dd5
+  FontColor<<Contenedor>> #ffffff
+  BorderColor<<Contenedor>> #2e6295
+  BackgroundColor<<Externo>> #999999
+  FontColor<<Externo>> #ffffff
+  BorderColor<<Externo>> #6b6b6b
+}
+skinparam database {
+  BackgroundColor<<BD>> #438dd5
+  FontColor<<BD>> #ffffff
+  BorderColor<<BD>> #2e6295
+}
+skinparam queue {
+  BackgroundColor<<Cola>> #438dd5
+  FontColor<<Cola>> #ffffff
+  BorderColor<<Cola>> #2e6295
+}
+skinparam actor {
+  BackgroundColor #08427b
+  FontColor #08427b
+  BorderColor #0b4884
+}
+
+actor "Estudiante\n[Persona]" as est
+actor "Coordinador de prácticas\n[Persona]" as coord
+actor "Docente asesor\n[Persona]" as doc
+actor "Supervisor de empresa\n[Persona]" as sup
+actor "Administrador DBA\n[Persona]" as dba
+
+rectangle "Sistema de Gestión de Prácticas Empresariales [Límite del sistema]" {
+  rectangle "Aplicación web\n[Contenedor: SPA React / TypeScript]\nInterfaz web para estudiantes, docentes,\ncoordinadores y formulario externo" as web <<Contenedor>>
+
+  rectangle "API de prácticas\n[Contenedor: Python / FastAPI, Monolito modular]\nOrquesta casos de uso, RBAC, máquina de estados\ny generación de actas (ADR-002)" as api <<Contenedor>>
+
+  queue "Broker de mensajes\n[Contenedor: RabbitMQ]\nCola durable de validaciones SIA y\nnotificaciones por correo (ADR-001)" as broker <<Cola>>
+
+  rectangle "Worker de integración\n[Contenedor: Python / Celery]\nEjecuta reintentos asíncronos al SIA con\ncircuit breaker y envía recordatorios (ADR-001)" as worker <<Contenedor>>
+
+  rectangle "Script CLI de migración\n[Contenedor: Python CLI]\nValida e importa la plantilla Excel\nnormalizada en el despliegue inicial (ADR-009)" as cli <<Contenedor>>
+
+  database "PostgreSQL\n[Base de datos: Relacional institucional]\nAlmacena prácticas, reglas versionadas y\ntabla EventoBitacora Append-Only (ADR-006)" as db <<BD>>
+
+  database "Repositorio de actas PDF\n[Almacenamiento: Sistema de archivos local]\nResguarda los binarios PDF firmados y\nsellados con SHA-256 (ADR-008)" as pdfrepo <<BD>>
+}
+
+rectangle "SIA\n[Sistema externo]" as sia <<Externo>>
+rectangle "SSO Institucional\n[Sistema externo]" as sso <<Externo>>
+rectangle "Servicio de correo\n[Sistema externo]" as correo <<Externo>>
+
+est --> web : Usa para postularse y registrar horas [HTTPS]
+coord --> web : Usa para gestionar y configurar [HTTPS]
+doc --> web : Usa para revisar y aprobar actas [HTTPS]
+sup --> web : Accede mediante Magic Link [HTTPS]
+dba --> cli : Ejecuta en modo dry-run o carga final [CLI / Bash]
+
+web --> api : Invoca operaciones del trámite [JSON / HTTPS]
+cli --> api : Invoca casos de uso de importación [Llamada interna / Python]
+
+api --> sso : Valida sesión institucional [OIDC / HTTPS]
+api --> sia : Consulta requisitos en línea (con timeout 5s) [REST / HTTPS]
+api --> db : Lee y escribe entidades e inserta bitácora [SQL / TCP]
+api --> pdfrepo : Guarda y lee archivos de actas PDF [I/O Disco]
+api --> broker : Publica tareas de validación y notificación [AMQP / TCP]
+
+broker --> worker : Entrega mensajes de la cola [AMQP / TCP]
+
+worker --> sia : Reintenta validación de requisitos [REST / HTTPS]
+worker --> correo : Envía correos y enlaces efímeros [SMTP / TLS]
+worker --> db : Actualiza estado de práctica y registra intento [SQL / TCP]
+@enduml

@@ -35,3 +35,10 @@ Se elige la opción B porque garantiza por diseño el rigor operativo requerido 
 ### Riesgos asumidos y sus respectivas mitigaciones
 
 - **Bloqueos operativos (Deadlocks) si un actor omite un paso externamente o ante errores atípicos:** Mitigación modelando estados de excepción (ejemplo: "Cancelada por fuerza mayor", "Prórroga") e instrumentando acciones compensatorias disponibles únicamente para el rol de Administrador.
+
+
+## Vistas arquitectónicas afectadas
+
+* [Vista Lógica](../vistas/01-logica.md) (`../diagramas/01-logica.puml`): Entidad `Practica` y su atributo `estadoActual`.
+* [Vista de Desarrollo](../vistas/03-desarrollo.md) (`../diagramas/03-desarrollo.puml`): Máquina de Estados Finitos encapsulada en el `Núcleo de Dominio`.
+* [Escenario ESC-03](../diagramas/secuencias/cu09-generar-acta.puml) y [Escenario ESC-04](../diagramas/secuencias/cu10-aprobar-acta.puml): Guardas `break` que impiden saltar estados del flujo.
