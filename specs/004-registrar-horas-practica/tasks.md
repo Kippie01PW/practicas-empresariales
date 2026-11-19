@@ -15,7 +15,7 @@
       Escenarios: 1, 2, 3
       Depende de: T-01
 
-- [ ] T-04 Crear DTOs inmutables para comando y respuesta de registro de horas
+- [X] T-04 Crear DTOs inmutables para comando y respuesta de registro de horas
       Archivos: aplicacion/dtos/registro_horas_dto.py
       Escenarios: 1, 2
       Depende de: ninguna
