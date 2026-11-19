@@ -25,7 +25,7 @@
       Escenarios: 1, 2, 3
       Depende de: ninguna
 
-- [ ] T-06 Definir puerto de repositorio para TokenEvaluacion
+- [X] T-06 Definir puerto de repositorio para TokenEvaluacion
       Archivos: aplicacion/puertos/repositorio_token_evaluacion.py
       Escenarios: 1, 2, 7, 8, 9, 11
       Depende de: T-02
