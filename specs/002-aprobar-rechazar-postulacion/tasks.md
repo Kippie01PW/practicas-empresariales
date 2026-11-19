@@ -1,6 +1,6 @@
 # Tareas: 002 Aprobar o rechazar postulación
 
-- [ ] T-01 Incorporar excepciones de dominio para evaluación de postulaciones
+- [X] T-01 Incorporar excepciones de dominio para evaluación de postulaciones
       Archivos: dominio/errores.py
       Escenarios: 2, 3, 4, 5
       Depende de: ninguna

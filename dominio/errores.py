@@ -1,11 +1,12 @@
 """Excepciones y errores de la capa de dominio.
 
-Traza: CU-01, Escenarios 3 y 4 de spec.md, ADR-002, ADR-007, ADR-010.
+Traza: CU-01, CU-02, Escenarios 2, 3, 4 y 5 de spec.md, ADR-002, ADR-007, ADR-010.
 
 Define las excepciones del modelo de dominio del sistema de gestión de prácticas
 empresariales. Estas excepciones encapsulan violaciones a invariantes y reglas
 fundamentales de negocio (e.g. prácticas activas simultáneas, falta de reglas
-normativas vigentes, transiciones no permitidas en el ciclo de vida).
+normativas vigentes, transiciones no permitidas en el ciclo de vida, justificación
+obligatoria de rechazo y entidades no encontradas).
 """
 
 from __future__ import annotations
@@ -133,5 +134,89 @@ class TransicionEstadoInvalidaError(ErrorDominio):
             f"TransicionEstadoInvalidaError("
             f"estado_origen={self.estado_origen!r}, "
             f"estado_destino={self.estado_destino!r}, "
+            f"practica_id={self.practica_id!r})"
+        )
+
+
+class MotivoRechazoRequeridoError(ErrorDominio):
+    """Excepción lanzada cuando se intenta rechazar una postulación sin justificación.
+
+    Traza: CU-02, Escenario 3 (Rechazo fallido por ausencia de justificación obligatoria).
+    RN-02: Todo rechazo administrativo debe contener una justificación no vacía.
+    """
+
+    def __init__(
+        self,
+        practica_id: Optional[str] = None,
+        mensaje: Optional[str] = None,
+    ) -> None:
+        self.practica_id: Optional[str] = practica_id
+
+        if mensaje is None:
+            detalle_practica = f" para la práctica '{practica_id}'" if practica_id else ""
+            mensaje = (
+                f"La justificación de rechazo es obligatoria{detalle_practica}. "
+                f"No se permite rechazar una postulación sin indicar el motivo."
+            )
+
+        super().__init__(mensaje)
+
+    def __repr__(self) -> str:
+        return f"MotivoRechazoRequeridoError(practica_id={self.practica_id!r})"
+
+
+class PracticaNoEncontradaError(ErrorDominio):
+    """Excepción lanzada cuando el identificador de la práctica no existe en el sistema.
+
+    Traza: CU-02, ADR-002.
+    """
+
+    def __init__(
+        self,
+        practica_id: str,
+        mensaje: Optional[str] = None,
+    ) -> None:
+        self.practica_id: str = practica_id
+
+        if mensaje is None:
+            mensaje = f"No se encontró ninguna práctica registrada con el identificador '{practica_id}'."
+
+        super().__init__(mensaje)
+
+    def __repr__(self) -> str:
+        return f"PracticaNoEncontradaError(practica_id={self.practica_id!r})"
+
+
+class DecisionPreviaEnFirmeError(TransicionEstadoInvalidaError):
+    """Excepción lanzada cuando se intenta reevaluar una postulación con decisión en firme.
+
+    Traza: CU-02, Escenario 5 (Intento de evaluar postulación con decisión previa ya asentada).
+    """
+
+    def __init__(
+        self,
+        estado_actual: str,
+        practica_id: Optional[str] = None,
+        mensaje: Optional[str] = None,
+    ) -> None:
+        self.estado_actual: str = estado_actual
+        if mensaje is None:
+            detalle_practica = f" '{practica_id}'" if practica_id else ""
+            mensaje = (
+                f"La postulación{detalle_practica} ya cuenta con una decisión administrativa en firme "
+                f"(estado '{estado_actual}'). No se permite reevaluar una postulación finalizada."
+            )
+
+        super().__init__(
+            estado_origen=estado_actual,
+            estado_destino="Evaluacion",
+            practica_id=practica_id,
+            mensaje=mensaje,
+        )
+
+    def __repr__(self) -> str:
+        return (
+            f"DecisionPreviaEnFirmeError("
+            f"estado_actual={self.estado_actual!r}, "
             f"practica_id={self.practica_id!r})"
         )
