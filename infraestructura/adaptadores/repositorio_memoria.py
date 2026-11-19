@@ -1,11 +1,11 @@
-"""Adaptadores de persistencia en memoria para Práctica, ReglaPrograma, DocenteAsesor y Bitácora.
+"""Adaptadores de persistencia en memoria para Práctica, ReglaPrograma, DocenteAsesor, RegistroHoras y Bitácora.
 
-Traza: CU-01, CU-02, CU-03, CU-12, EAC-01, EAC-02, EAC-03, RT-01, ADR-001, ADR-002, ADR-003, ADR-006, ADR-007, ADR-010.
+Traza: CU-01, CU-02, CU-03, CU-04, CU-12, EAC-01, EAC-02, EAC-03, RT-01, ADR-001, ADR-002, ADR-003, ADR-006, ADR-007, ADR-010.
 Vista Lógica §2, Vista de Desarrollo §2.
 
-Implementa los puertos `RepositorioPracticaPort`, `RepositorioReglaProgramaPort`
-y `RepositorioDocentePort` utilizando estructuras en memoria deterministas para pruebas
-y validación sin dependencias externas ni bases de datos reales en esta etapa (ADR-002, ADR-003).
+Implementa los puertos `RepositorioPracticaPort`, `RepositorioReglaProgramaPort`,
+`RepositorioDocentePort` y `RepositorioRegistroHorasPort` utilizando estructuras en memoria
+deterministas para pruebas y validación sin dependencias externas ni bases de datos reales en esta etapa (ADR-002, ADR-003).
 """
 
 from __future__ import annotations
@@ -14,11 +14,13 @@ from typing import Optional
 
 from aplicacion.puertos.repositorio_docente import RepositorioDocentePort
 from aplicacion.puertos.repositorio_practica import RepositorioPracticaPort
+from aplicacion.puertos.repositorio_registro_horas import RepositorioRegistroHorasPort
 from aplicacion.puertos.repositorio_regla import RepositorioReglaProgramaPort
 from dominio.modelos.docente_asesor import DocenteAsesor
 from dominio.modelos.evento_bitacora import EventoBitacora
 from dominio.modelos.intento_validacion import IntentoValidacion
 from dominio.modelos.practica import EstadoPractica, Practica
+from dominio.modelos.registro_horas import RegistroHoras
 from dominio.modelos.regla_programa import EstadoVigenciaRegla, ReglaPrograma
 
 
@@ -186,3 +188,48 @@ class InMemoryRepositorioDocente(RepositorioDocentePort):
     def limpiar(self) -> None:
         """Limpia los docentes almacenados (útil para pruebas)."""
         self._docentes.clear()
+
+
+class InMemoryRepositorioRegistroHoras(RepositorioRegistroHorasPort):
+    """Implementación en memoria del puerto RepositorioRegistroHorasPort.
+
+    Almacena los reportes semanales de horas de práctica, asegurando consistencia
+    transaccional, detección de reportes duplicados y consulta por práctica (RT-01, CU-04).
+    """
+
+    def __init__(self, registros_iniciales: Optional[list[RegistroHoras]] = None) -> None:
+        self._registros: dict[str, RegistroHoras] = {}
+        if registros_iniciales:
+            for registro in registros_iniciales:
+                self.guardar(registro)
+
+    def guardar(self, registro: RegistroHoras) -> None:
+        """Persiste un nuevo reporte de horas en memoria."""
+        self._registros[registro.id] = registro
+
+    def buscar_por_id(self, registro_id: str) -> Optional[RegistroHoras]:
+        """Busca y retorna un reporte de horas por su identificador único."""
+        return self._registros.get(registro_id)
+
+    def buscar_por_practica_y_semana(
+        self, practica_id: str, semana: int
+    ) -> Optional[RegistroHoras]:
+        """Busca si ya existe un reporte de horas para una práctica y semana determinadas."""
+        for registro in self._registros.values():
+            if registro.practica_id == practica_id and registro.semana == semana:
+                return registro
+        return None
+
+    def listar_por_practica(self, practica_id: str) -> list[RegistroHoras]:
+        """Retorna todos los reportes de horas de una práctica ordenados por semana."""
+        registros = [r for r in self._registros.values() if r.practica_id == practica_id]
+        return sorted(registros, key=lambda r: r.semana)
+
+    def listar_todos(self) -> list[RegistroHoras]:
+        """Retorna todos los reportes de horas almacenados."""
+        return list(self._registros.values())
+
+    def limpiar(self) -> None:
+        """Limpia los registros almacenados (útil para pruebas)."""
+        self._registros.clear()
+

@@ -35,7 +35,7 @@
       Escenarios: 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12
       Depende de: T-01, T-02, T-03, T-04, T-05, T-06
 
-- [ ] T-08 Implementar repositorio en memoria para RegistroHoras y actualizar persistencia de Practica
+- [X] T-08 Implementar repositorio en memoria para RegistroHoras y actualizar persistencia de Practica
       Archivos: infraestructura/adaptadores/repositorio_memoria.py
       Escenarios: 1, 2, 8, 12
       Depende de: T-02, T-03, T-05
