@@ -10,7 +10,7 @@
       Escenarios: 1, 2, 3, 4, 5
       Depende de: ninguna
 
-- [ ] T-03 Crear modelos de dominio para IntentoValidacion y EventoBitacora
+- [X] T-03 Crear modelos de dominio para IntentoValidacion y EventoBitacora
       Archivos: dominio/modelos/intento_validacion.py, dominio/modelos/evento_bitacora.py
       Escenarios: 1, 2, 5, 6, 7
       Depende de: ninguna
