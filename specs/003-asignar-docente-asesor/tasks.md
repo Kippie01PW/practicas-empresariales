@@ -45,7 +45,7 @@
       Escenarios: 1, 2, 3, 4, 5, 6, 7
       Depende de: T-07, T-08
 
-- [ ] T-10 Validar todos los escenarios de spec.md y generar validacion.md
+- [X] T-10 Validar todos los escenarios de spec.md y generar validacion.md
       Archivos: specs/003-asignar-docente-asesor/validacion.md
       Escenarios: 1, 2, 3, 4, 5, 6, 7
       Depende de: T-09
