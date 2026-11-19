@@ -40,7 +40,7 @@
       Escenarios: 1, 2, 3, 4, 5
       Depende de: T-02, T-04
 
-- [ ] T-09 Implementar caso de uso principal PostularEstudianteCasoUso
+- [X] T-09 Implementar caso de uso principal PostularEstudianteCasoUso
       Archivos: aplicacion/casos_uso/postular_estudiante.py
       Escenarios: 1, 2, 3, 4, 5
       Depende de: T-01, T-02, T-03, T-04, T-05, T-06, T-07, T-08
