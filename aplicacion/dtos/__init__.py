@@ -3,6 +3,11 @@
 Traza: ADR-002, AGENTS.md (Convenciones de código).
 """
 
+from aplicacion.dtos.evaluacion_postulacion_dto import (
+    DecisionEvaluacion,
+    EvaluacionPostulacionRespuestaDTO,
+    EvaluarPostulacionComando,
+)
 from aplicacion.dtos.postulacion_dto import (
     PostulacionRespuestaDTO,
     PostularEstudianteComando,
@@ -11,4 +16,7 @@ from aplicacion.dtos.postulacion_dto import (
 __all__ = [
     "PostularEstudianteComando",
     "PostulacionRespuestaDTO",
+    "DecisionEvaluacion",
+    "EvaluarPostulacionComando",
+    "EvaluacionPostulacionRespuestaDTO",
 ]

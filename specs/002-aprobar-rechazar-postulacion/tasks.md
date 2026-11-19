@@ -10,7 +10,7 @@
       Escenarios: 1, 2, 3, 4, 5
       Depende de: T-01
 
-- [ ] T-03 Crear DTOs inmutables para comando y respuesta de evaluación de postulación
+- [X] T-03 Crear DTOs inmutables para comando y respuesta de evaluación de postulación
       Archivos: aplicacion/dtos/evaluacion_postulacion_dto.py
       Escenarios: 1, 2, 3
       Depende de: ninguna
