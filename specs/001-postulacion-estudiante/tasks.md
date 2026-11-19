@@ -60,7 +60,7 @@
       Escenarios: 1, 2, 5, 6, 7
       Depende de: T-07
 
-- [ ] T-13 Implementar adaptador en memoria para Bróker de Mensajes (cola de tareas y DLQ)
+- [X] T-13 Implementar adaptador en memoria para Bróker de Mensajes (cola de tareas y DLQ)
       Archivos: infraestructura/adaptadores/broker_memoria.py
       Escenarios: 5, 6, 7
       Depende de: T-07
