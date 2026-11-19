@@ -35,7 +35,7 @@
       Escenarios: 1, 2, 3, 4, 5, 6, 7
       Depende de: T-01, T-02, T-03, T-04, T-05, T-06
 
-- [ ] T-08 Implementar repositorio en memoria para DocenteAsesor y actualizar persistencia de Práctica
+- [X] T-08 Implementar repositorio en memoria para DocenteAsesor y actualizar persistencia de Práctica
       Archivos: infraestructura/adaptadores/repositorio_memoria.py
       Escenarios: 1, 2, 3, 4, 5
       Depende de: T-02, T-03, T-05

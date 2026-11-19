@@ -1,22 +1,24 @@
-"""Adaptadores de persistencia en memoria para Práctica, ReglaPrograma y Bitácora.
+"""Adaptadores de persistencia en memoria para Práctica, ReglaPrograma, DocenteAsesor y Bitácora.
 
-Traza: CU-01, CU-02, CU-12, EAC-01, EAC-02, EAC-03, ADR-001, ADR-002, ADR-003, ADR-006, ADR-007, ADR-010.
+Traza: CU-01, CU-02, CU-03, CU-12, EAC-01, EAC-02, EAC-03, RT-01, ADR-001, ADR-002, ADR-003, ADR-006, ADR-007, ADR-010.
 Vista Lógica §2, Vista de Desarrollo §2.
 
-Implementa los puertos `RepositorioPracticaPort` y `RepositorioReglaProgramaPort`
-utilizando estructuras en memoria deterministas para pruebas y validación sin dependencias
-externas ni bases de datos reales en esta etapa (ADR-002, ADR-003).
+Implementa los puertos `RepositorioPracticaPort`, `RepositorioReglaProgramaPort`
+y `RepositorioDocentePort` utilizando estructuras en memoria deterministas para pruebas
+y validación sin dependencias externas ni bases de datos reales en esta etapa (ADR-002, ADR-003).
 """
 
 from __future__ import annotations
 
 from typing import Optional
 
+from aplicacion.puertos.repositorio_docente import RepositorioDocentePort
 from aplicacion.puertos.repositorio_practica import RepositorioPracticaPort
 from aplicacion.puertos.repositorio_regla import RepositorioReglaProgramaPort
+from dominio.modelos.docente_asesor import DocenteAsesor
 from dominio.modelos.evento_bitacora import EventoBitacora
 from dominio.modelos.intento_validacion import IntentoValidacion
-from dominio.modelos.practica import Practica
+from dominio.modelos.practica import EstadoPractica, Practica
 from dominio.modelos.regla_programa import EstadoVigenciaRegla, ReglaPrograma
 
 
@@ -138,3 +140,49 @@ class InMemoryRepositorioReglaPrograma(RepositorioReglaProgramaPort):
     def limpiar(self) -> None:
         """Limpia las reglas almacenadas."""
         self._reglas.clear()
+
+
+class InMemoryRepositorioDocente(RepositorioDocentePort):
+    """Implementación en memoria del puerto RepositorioDocentePort.
+
+    Almacena los tutores académicos y gestiona la consulta de disponibilidad
+    y actualización de cupos de prácticas empresariales (RT-01, CU-03).
+    """
+
+    def __init__(self, docentes_iniciales: Optional[list[DocenteAsesor]] = None) -> None:
+        self._docentes: dict[str, DocenteAsesor] = {}
+        if docentes_iniciales:
+            for docente in docentes_iniciales:
+                self.guardar(docente)
+
+    def guardar(self, docente: DocenteAsesor) -> None:
+        """Persiste un nuevo docente asesor en el almacén en memoria."""
+        self._docentes[docente.id] = docente
+
+    def actualizar(self, docente: DocenteAsesor) -> None:
+        """Actualiza un docente asesor existente en el almacén en memoria."""
+        self._docentes[docente.id] = docente
+
+    def buscar_por_id(self, docente_id: str) -> Optional[DocenteAsesor]:
+        """Busca y retorna un docente asesor por su identificador único."""
+        return self._docentes.get(docente_id)
+
+    def buscar_por_documento(self, documento: str) -> Optional[DocenteAsesor]:
+        """Busca y retorna un docente asesor por su documento de identidad."""
+        doc_limpio = documento.strip()
+        for docente in self._docentes.values():
+            if docente.documento == doc_limpio:
+                return docente
+        return None
+
+    def listar_disponibles(self) -> list[DocenteAsesor]:
+        """Retorna todos los docentes activos que cuentan con cupo libre."""
+        return [d for d in self._docentes.values() if d.tiene_cupo_disponible()]
+
+    def listar_todos(self) -> list[DocenteAsesor]:
+        """Retorna todos los docentes asesores registrados."""
+        return list(self._docentes.values())
+
+    def limpiar(self) -> None:
+        """Limpia los docentes almacenados (útil para pruebas)."""
+        self._docentes.clear()
