@@ -30,7 +30,7 @@
       Escenarios: 1, 2, 4, 5
       Depende de: T-02
 
-- [ ] T-07 Registrar e inyectar el caso de uso EvaluarPostulacionCasoUso en main.py
+- [X] T-07 Registrar e inyectar el caso de uso EvaluarPostulacionCasoUso en main.py
       Archivos: main.py
       Escenarios: 1, 2, 3, 4, 5, 6, 7
       Depende de: T-05, T-06

@@ -27,8 +27,13 @@ from __future__ import annotations
 import sys
 from dataclasses import dataclass
 
+from aplicacion.casos_uso.evaluar_postulacion import EvaluarPostulacionCasoUso
 from aplicacion.casos_uso.postular_estudiante import PostularEstudianteCasoUso
 from aplicacion.casos_uso.reintentar_validacion_sia import ReintentarValidacionSiaCasoUso
+from aplicacion.dtos.evaluacion_postulacion_dto import (
+    EvaluacionPostulacionRespuestaDTO,
+    EvaluarPostulacionComando,
+)
 from aplicacion.dtos.postulacion_dto import (
     PostulacionRespuestaDTO,
     PostularEstudianteComando,
@@ -58,6 +63,7 @@ class SistemaPracticasEmpresariales:
     # Casos de uso (Capa de Aplicación)
     caso_uso_postular: PostularEstudianteCasoUso
     caso_uso_reintentar_sia: ReintentarValidacionSiaCasoUso
+    caso_uso_evaluar: EvaluarPostulacionCasoUso
 
     # Componentes de seguridad y autorización
     autorizador_rbac: AutorizadorRBAC
@@ -138,9 +144,16 @@ def inicializar_sistema(
         servicio_correo=servicio_correo,
     )
 
+    caso_uso_evaluar = EvaluarPostulacionCasoUso(
+        repositorio_practica=repo_practica,
+        servicio_correo=servicio_correo,
+        autorizador_rbac=autorizador_rbac,
+    )
+
     return SistemaPracticasEmpresariales(
         caso_uso_postular=caso_uso_postular,
         caso_uso_reintentar_sia=caso_uso_reintentar_sia,
+        caso_uso_evaluar=caso_uso_evaluar,
         autorizador_rbac=autorizador_rbac,
         proveedor_identidad=proveedor_identidad,
         repositorio_practica=repo_practica,
@@ -166,9 +179,12 @@ def main() -> int:
     print("    - Bróker de Mensajería:     InMemoryBrokerMensajes (Tareas + DLQ)")
     print("    - Servicio de Correo:       AdaptadorCorreoSimulado")
     print("    - Identidad y RBAC:         ProveedorIdentidadSimulado + AutorizadorRBAC")
+    print("    - Casos de Uso Disponibles: PostularEstudianteCasoUso (CU-01),")
+    print("                                ReintentarValidacionSiaCasoUso (CU-01),")
+    print("                                EvaluarPostulacionCasoUso (CU-02)")
 
     # Demostración del Escenario 1: Postulación exitosa
-    print("\n--- Demostración: Postulación exitosa (Escenario 1) ---")
+    print("\n--- Demostración CU-01: Postulación exitosa (Escenario 1) ---")
     doc_demo = "1098765432"
     sistema.servicio_sia.configurar_estudiante_cumple(doc_demo, creditos_aprobados=150, porcentaje_avance=88.5)
 
@@ -193,6 +209,25 @@ def main() -> int:
         print(f"Intentos de validación registrados: {len(intentos)}")
         eventos = sistema.repositorio_practica.buscar_eventos_por_entidad(f"Practica:{practica_registrada.id}")
         print(f"Eventos de bitácora registrados:    {len(eventos)}")
+
+    # Demostración CU-02: Aprobación exitosa por parte del Coordinador
+    print("\n--- Demostración CU-02: Aprobación por Coordinador (Escenario 1) ---")
+    comando_evaluar = EvaluarPostulacionComando(
+        practica_id=respuesta.practica_id or "",
+        decision="APROBAR",
+        actor_id="coord_001",
+        rol_actor=RolUsuario.COORDINADOR_PRACTICAS.value,
+        ip_origen="192.168.1.50",
+    )
+    respuesta_eval: EvaluacionPostulacionRespuestaDTO = sistema.caso_uso_evaluar(comando_evaluar)
+    print(f"Resultado Evaluación: {respuesta_eval.nuevo_estado}")
+    print(f"Mensaje:             {respuesta_eval.mensaje}")
+
+    practica_evaluada = sistema.repositorio_practica.buscar_por_id(respuesta.practica_id or "")
+    if practica_evaluada:
+        print(f"Nuevo estado en BD:  {practica_evaluada.estado_actual.value}")
+        eventos = sistema.repositorio_practica.buscar_eventos_por_entidad(f"Practica:{practica_evaluada.id}")
+        print(f"Total eventos en bitácora: {len(eventos)}")
 
     print("\n[OK] El sistema de gestión de prácticas está listo y operativo.")
     return 0
