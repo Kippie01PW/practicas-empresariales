@@ -70,7 +70,7 @@
       Escenarios: 1, 2, 3, 4, 5, 6
       Depende de: T-07, T-08
 
-- [ ] T-15 Configurar composición de dependencias y punto de entrada en main.py
+- [X] T-15 Configurar composición de dependencias y punto de entrada en main.py
       Archivos: main.py
       Escenarios: 1, 2, 3, 4, 5, 6, 7
       Depende de: T-09, T-10, T-11, T-12, T-13, T-14
