@@ -1,6 +1,6 @@
 """Adaptadores de persistencia en memoria para Práctica, ReglaPrograma y Bitácora.
 
-Traza: CU-01, CU-12, EAC-01, EAC-02, ADR-001, ADR-002, ADR-003, ADR-006, ADR-007, ADR-010.
+Traza: CU-01, CU-02, CU-12, EAC-01, EAC-02, EAC-03, ADR-001, ADR-002, ADR-003, ADR-006, ADR-007, ADR-010.
 Vista Lógica §2, Vista de Desarrollo §2.
 
 Implementa los puertos `RepositorioPracticaPort` y `RepositorioReglaProgramaPort`
@@ -77,6 +77,11 @@ class InMemoryRepositorioPractica(RepositorioPracticaPort):
     def listar_todas(self) -> list[Practica]:
         """Retorna todas las prácticas almacenadas."""
         return list(self._practicas.values())
+
+    def listar_por_estado(self, estado: EstadoPractica | str) -> list[Practica]:
+        """Retorna las prácticas que coincidan con un estado específico (ej. 'Solicitada')."""
+        valor_estado = estado.value if isinstance(estado, EstadoPractica) else str(estado)
+        return [p for p in self._practicas.values() if p.estado_actual.value == valor_estado]
 
     def listar_todos_eventos(self) -> list[EventoBitacora]:
         """Retorna todos los eventos de auditoría registrados."""
