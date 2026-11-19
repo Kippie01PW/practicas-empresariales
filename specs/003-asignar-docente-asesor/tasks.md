@@ -20,7 +20,7 @@
       Escenarios: 1, 2, 3
       Depende de: ninguna
 
-- [ ] T-05 Definir puerto de repositorio para DocenteAsesor
+- [X] T-05 Definir puerto de repositorio para DocenteAsesor
       Archivos: aplicacion/puertos/repositorio_docente.py
       Escenarios: 1, 2, 3
       Depende de: T-02
