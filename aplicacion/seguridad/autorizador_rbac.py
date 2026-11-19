@@ -1,11 +1,13 @@
 """Componente centralizado de autorización basada en roles (RBAC) en la capa de Aplicación.
 
-Traza: CU-01, CU-02, CU-03, CU-04, RN-01, RN-03, PA-02, ADR-002, ADR-004, ADR-005, Vista Lógica §2, Vista de Desarrollo §2.
+Traza: CU-01, CU-02, CU-03, CU-04, CU-05, RN-01, RN-03, PA-02, ADR-002, ADR-004, ADR-005,
+Vista Lógica §2, Vista de Desarrollo §2.
 
 Implementa la política de autorización RBAC centralizada y contextual (Context-Based Access Control)
 bajo la regla 'deny-by-default' (ADR-005). Valida tanto el rol del actor autenticado como la
 pertenencia de los recursos según la identidad del usuario (e.g. un estudiante solo puede postularse
-a sí mismo y ver sus datos, RN-01).
+a sí mismo y ver sus datos, RN-01; un supervisor solo puede validar horas de su práctica asignada,
+RN-01, CU-05).
 """
 
 from __future__ import annotations
@@ -136,6 +138,10 @@ class AutorizadorRBAC:
             RolUsuario.SUPERVISOR_EMPRESA.value,
             RolUsuario.DOCENTE.value,
             RolUsuario.DOCENTE_ASESOR.value,
+        },
+        "validar_horas": {
+            RolUsuario.SUPERVISOR.value,
+            RolUsuario.SUPERVISOR_EMPRESA.value,
         },
         "evaluar_desempeno": {
             RolUsuario.SUPERVISOR.value,
@@ -498,4 +504,76 @@ class AutorizadorRBAC:
             usuario_id=actor_id,
             operacion="registrar_horas",
         )
+
+    def validar_validacion_horas(
+        self,
+        rol_actor: str,
+        usuario_id: Optional[str] = None,
+        operacion: str = "validar_horas",
+    ) -> None:
+        """Valida las autorizaciones específicas para el caso de uso de validación de horas (CU-05).
+
+        Asegura que el actor posea el rol ``SupervisorEmpresa`` o ``Supervisor``
+        bajo política deny-by-default (ADR-005, EAC-03, plan.md CU-05).
+
+        Args:
+            rol_actor: Rol presentado por el usuario autenticado.
+            usuario_id: Identificador del usuario (opcional).
+            operacion: Nombre de la operación evaluada ('validar_horas').
+
+        Raises:
+            AccesoDenegadoError: Si el rol del actor no es Supervisor o SupervisorEmpresa.
+        """
+        self.validar_rol(
+            rol_actor=rol_actor,
+            roles_permitidos=[
+                RolUsuario.SUPERVISOR.value,
+                RolUsuario.SUPERVISOR_EMPRESA.value,
+            ],
+            operacion=operacion,
+            usuario_id=usuario_id,
+        )
+
+    def validar_pertenencia_supervisor(
+        self,
+        contexto: ContextoUsuario,
+        supervisor_asignado_id: str,
+        operacion: Optional[str] = None,
+    ) -> None:
+        """Valida que el supervisor opere exclusivamente sobre su propia práctica asignada.
+
+        Traza: CU-05, Escenario 6 (Intento de validación sobre reporte de práctica ajena),
+        RN-01 (Pertenencia contextual de datos), ADR-005 (RBAC centralizado).
+
+        Si el rol del actor es Supervisor o SupervisorEmpresa, verifica que su
+        ``usuario_id`` coincida con el ``supervisor_asignado_id`` de la práctica.
+        El intento de acceder a prácticas ajenas es bloqueado sin exponer datos.
+
+        Args:
+            contexto: Contexto de identidad del actor autenticado.
+            supervisor_asignado_id: Identificador del supervisor registrado en la práctica.
+            operacion: Operación invocada (opcional, para diagnóstico).
+
+        Raises:
+            AccesoDenegadoError: Si el supervisor no coincide con el asignado a la práctica.
+        """
+        from dominio.errores import SupervisorNoAsignadoAPracticaError  # evita ciclo
+
+        rol_normalizado = self.normalizar_rol(contexto.rol)
+        roles_supervisor = {
+            self.normalizar_rol(RolUsuario.SUPERVISOR.value),
+            self.normalizar_rol(RolUsuario.SUPERVISOR_EMPRESA.value),
+        }
+
+        if rol_normalizado in roles_supervisor:
+            if contexto.usuario_id != supervisor_asignado_id.strip():
+                detalle_op = f" para la operación '{operacion}'" if operacion else ""
+                raise AccesoDenegadoError(
+                    f"Violación de pertenencia contextual{detalle_op}: El supervisor "
+                    f"'{contexto.usuario_id}' no está asignado a la práctica del supervisor "
+                    f"'{supervisor_asignado_id}' (RN-01). Acceso denegado.",
+                    rol_actor=contexto.rol,
+                    operacion=operacion,
+                    usuario_id=contexto.usuario_id,
+                )
 

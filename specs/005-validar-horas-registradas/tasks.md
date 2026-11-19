@@ -30,7 +30,7 @@
       Escenarios: 1, 2, 7, 8, 9, 11
       Depende de: T-02
 
-- [ ] T-07 Configurar reglas de autorización RBAC y pertenencia contextual supervisor-práctica
+- [X] T-07 Configurar reglas de autorización RBAC y pertenencia contextual supervisor-práctica
       Archivos: aplicacion/seguridad/autorizador_rbac.py
       Escenarios: 1, 6, 10, 11
       Depende de: ninguna
