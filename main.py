@@ -27,9 +27,14 @@ from __future__ import annotations
 import sys
 from dataclasses import dataclass
 
+from aplicacion.casos_uso.asignar_docente_asesor import AsignarDocenteAsesorCasoUso
 from aplicacion.casos_uso.evaluar_postulacion import EvaluarPostulacionCasoUso
 from aplicacion.casos_uso.postular_estudiante import PostularEstudianteCasoUso
 from aplicacion.casos_uso.reintentar_validacion_sia import ReintentarValidacionSiaCasoUso
+from aplicacion.dtos.asignacion_docente_dto import (
+    AsignacionDocenteRespuestaDTO,
+    AsignarDocenteComando,
+)
 from aplicacion.dtos.evaluacion_postulacion_dto import (
     EvaluacionPostulacionRespuestaDTO,
     EvaluarPostulacionComando,
@@ -39,10 +44,12 @@ from aplicacion.dtos.postulacion_dto import (
     PostularEstudianteComando,
 )
 from aplicacion.seguridad.autorizador_rbac import AutorizadorRBAC, RolUsuario
+from dominio.modelos.docente_asesor import DocenteAsesor
 from dominio.modelos.regla_programa import EstadoVigenciaRegla, ReglaPrograma
 from infraestructura.adaptadores.broker_memoria import InMemoryBrokerMensajes
 from infraestructura.adaptadores.cliente_sia_simulado import AdaptadorSiaSimulado
 from infraestructura.adaptadores.repositorio_memoria import (
+    InMemoryRepositorioDocente,
     InMemoryRepositorioPractica,
     InMemoryRepositorioReglaPrograma,
 )
@@ -64,6 +71,7 @@ class SistemaPracticasEmpresariales:
     caso_uso_postular: PostularEstudianteCasoUso
     caso_uso_reintentar_sia: ReintentarValidacionSiaCasoUso
     caso_uso_evaluar: EvaluarPostulacionCasoUso
+    caso_uso_asignar_docente: AsignarDocenteAsesorCasoUso
 
     # Componentes de seguridad y autorización
     autorizador_rbac: AutorizadorRBAC
@@ -72,6 +80,7 @@ class SistemaPracticasEmpresariales:
     # Adaptadores de infraestructura
     repositorio_practica: InMemoryRepositorioPractica
     repositorio_regla: InMemoryRepositorioReglaPrograma
+    repositorio_docente: InMemoryRepositorioDocente
     servicio_sia: AdaptadorSiaSimulado
     broker_mensajes: InMemoryBrokerMensajes
     servicio_correo: AdaptadorCorreoSimulado
@@ -94,6 +103,7 @@ def inicializar_sistema(
     # 1. Instanciación de adaptadores de infraestructura
     repo_practica = InMemoryRepositorioPractica()
     repo_regla = InMemoryRepositorioReglaPrograma()
+    repo_docente = InMemoryRepositorioDocente()
     servicio_sia = AdaptadorSiaSimulado(umbral_fallos=umbral_fallos_sia)
     broker_mensajes = InMemoryBrokerMensajes()
     servicio_correo = AdaptadorCorreoSimulado()
@@ -102,7 +112,7 @@ def inicializar_sistema(
     # 2. Componentes de seguridad de la capa de aplicación
     autorizador_rbac = AutorizadorRBAC()
 
-    # 3. Precarga de reglas de programa vigentes (ADR-007)
+    # 3. Precarga de reglas de programa vigentes (ADR-007) y tutores académicos (RT-01)
     if precargar_reglas_ejemplo:
         regla_sistemas = ReglaPrograma(
             programa_academico="Ingeniería de Sistemas",
@@ -128,6 +138,40 @@ def inicializar_sistema(
         )
         repo_regla.guardar(regla_industrial)
 
+        # Tutores de ejemplo conforme a los escenarios de spec.md
+        tutor_1 = DocenteAsesor(
+            id="doc_001",
+            documento="79123456",
+            nombre_completo="Prof. Carlos Gómez",
+            correo_institucional="carlos.gomez@universidad.edu.co",
+            cupo_maximo_practicas=10,
+            practicas_activas=3,
+            activo=True,
+        )
+        repo_docente.guardar(tutor_1)
+
+        tutor_cupo_lleno = DocenteAsesor(
+            id="doc_002",
+            documento="79654321",
+            nombre_completo="Prof. Ana María Ruiz",
+            correo_institucional="ana.ruiz@universidad.edu.co",
+            cupo_maximo_practicas=10,
+            practicas_activas=10,
+            activo=True,
+        )
+        repo_docente.guardar(tutor_cupo_lleno)
+
+        tutor_inactivo = DocenteAsesor(
+            id="doc_003",
+            documento="79987654",
+            nombre_completo="Prof. Roberto Pineda",
+            correo_institucional="roberto.pineda@universidad.edu.co",
+            cupo_maximo_practicas=10,
+            practicas_activas=0,
+            activo=False,
+        )
+        repo_docente.guardar(tutor_inactivo)
+
     # 4. Inyección de dependencias en casos de uso (Capa Aplicación)
     caso_uso_postular = PostularEstudianteCasoUso(
         repositorio_practica=repo_practica,
@@ -150,14 +194,23 @@ def inicializar_sistema(
         autorizador_rbac=autorizador_rbac,
     )
 
+    caso_uso_asignar_docente = AsignarDocenteAsesorCasoUso(
+        repositorio_practica=repo_practica,
+        repositorio_docente=repo_docente,
+        servicio_correo=servicio_correo,
+        autorizador_rbac=autorizador_rbac,
+    )
+
     return SistemaPracticasEmpresariales(
         caso_uso_postular=caso_uso_postular,
         caso_uso_reintentar_sia=caso_uso_reintentar_sia,
         caso_uso_evaluar=caso_uso_evaluar,
+        caso_uso_asignar_docente=caso_uso_asignar_docente,
         autorizador_rbac=autorizador_rbac,
         proveedor_identidad=proveedor_identidad,
         repositorio_practica=repo_practica,
         repositorio_regla=repo_regla,
+        repositorio_docente=repo_docente,
         servicio_sia=servicio_sia,
         broker_mensajes=broker_mensajes,
         servicio_correo=servicio_correo,
@@ -175,13 +228,15 @@ def main() -> int:
     print("[+] Dependencias cableadas e inicializadas correctamente:")
     print("    - Repositorio de Prácticas: InMemoryRepositorioPractica")
     print("    - Repositorio de Reglas:    InMemoryRepositorioReglaPrograma")
+    print("    - Repositorio de Docentes:  InMemoryRepositorioDocente")
     print("    - Servicio SIA:             AdaptadorSiaSimulado (Circuit Breaker activo)")
     print("    - Bróker de Mensajería:     InMemoryBrokerMensajes (Tareas + DLQ)")
     print("    - Servicio de Correo:       AdaptadorCorreoSimulado")
     print("    - Identidad y RBAC:         ProveedorIdentidadSimulado + AutorizadorRBAC")
     print("    - Casos de Uso Disponibles: PostularEstudianteCasoUso (CU-01),")
     print("                                ReintentarValidacionSiaCasoUso (CU-01),")
-    print("                                EvaluarPostulacionCasoUso (CU-02)")
+    print("                                EvaluarPostulacionCasoUso (CU-02),")
+    print("                                AsignarDocenteAsesorCasoUso (CU-03)")
 
     # Demostración del Escenario 1: Postulación exitosa
     print("\n--- Demostración CU-01: Postulación exitosa (Escenario 1) ---")
@@ -227,6 +282,33 @@ def main() -> int:
     if practica_evaluada:
         print(f"Nuevo estado en BD:  {practica_evaluada.estado_actual.value}")
         eventos = sistema.repositorio_practica.buscar_eventos_por_entidad(f"Practica:{practica_evaluada.id}")
+        print(f"Total eventos en bitácora: {len(eventos)}")
+
+    # Demostración CU-03: Asignación de docente asesor con cupo disponible
+    print("\n--- Demostración CU-03: Asignación de Tutor Académico (Escenario 1) ---")
+    docente_previo = sistema.repositorio_docente.buscar_por_id("doc_001")
+    if docente_previo:
+        print(f"Tutor seleccionado:  {docente_previo.nombre_completo} (Cupo previo: {docente_previo.practicas_activas}/{docente_previo.cupo_maximo_practicas})")
+
+    comando_asignar = AsignarDocenteComando(
+        practica_id=respuesta.practica_id or "",
+        docente_asesor_id="doc_001",
+        actor_id="coord_001",
+        rol_actor=RolUsuario.COORDINADOR_PRACTICAS.value,
+        ip_origen="192.168.1.50",
+    )
+    respuesta_asignar: AsignacionDocenteRespuestaDTO = sistema.caso_uso_asignar_docente(comando_asignar)
+    print(f"Resultado Asignación:{respuesta_asignar.nuevo_estado}")
+    print(f"Mensaje:             {respuesta_asignar.mensaje}")
+
+    practica_asignada = sistema.repositorio_practica.buscar_por_id(respuesta.practica_id or "")
+    if practica_asignada:
+        print(f"Nuevo estado en BD:  {practica_asignada.estado_actual.value}")
+        print(f"Tutor en práctica:   {practica_asignada.docente_asesor_id}")
+        docente_actualizado = sistema.repositorio_docente.buscar_por_id("doc_001")
+        if docente_actualizado:
+            print(f"Nueva carga tutor:   {docente_actualizado.practicas_activas}/{docente_actualizado.cupo_maximo_practicas}")
+        eventos = sistema.repositorio_practica.buscar_eventos_por_entidad(f"Practica:{practica_asignada.id}")
         print(f"Total eventos en bitácora: {len(eventos)}")
 
     print("\n[OK] El sistema de gestión de prácticas está listo y operativo.")
