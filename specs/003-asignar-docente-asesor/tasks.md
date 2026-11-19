@@ -15,7 +15,7 @@
       Escenarios: 1, 4, 5
       Depende de: T-01
 
-- [ ] T-04 Crear DTOs inmutables para comando y respuestas de asignación de tutor
+- [X] T-04 Crear DTOs inmutables para comando y respuestas de asignación de tutor
       Archivos: aplicacion/dtos/asignacion_docente_dto.py
       Escenarios: 1, 2, 3
       Depende de: ninguna
