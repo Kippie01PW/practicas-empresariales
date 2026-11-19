@@ -5,7 +5,7 @@
       Escenarios: 3, 4, 5, 6, 7, 8, 9, 10, 11
       Depende de: ninguna
 
-- [ ] T-02 Crear modelo de dominio TokenEvaluacion con control de vigencia y un solo uso
+- [X] T-02 Crear modelo de dominio TokenEvaluacion con control de vigencia y un solo uso
       Archivos: dominio/modelos/token_evaluacion.py
       Escenarios: 1, 2, 7, 8, 9, 11
       Depende de: T-01
