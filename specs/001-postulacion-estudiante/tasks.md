@@ -1,6 +1,6 @@
 # Tareas: 001 Postulación de estudiante a la práctica
 
-- [ ] T-01 Crear enumeraciones y modelo de dominio para Práctica
+- [X] T-01 Crear enumeraciones y modelo de dominio para Práctica
       Archivos: dominio/modelos/practica.py
       Escenarios: 1, 2, 3, 5, 6, 7
       Depende de: ninguna
