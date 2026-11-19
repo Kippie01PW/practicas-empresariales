@@ -20,7 +20,7 @@
       Escenarios: 1, 2, 3, 4, 5
       Depende de: ninguna
 
-- [ ] T-05 Crear DTOs inmutables para comando y respuesta de postulación
+- [X] T-05 Crear DTOs inmutables para comando y respuesta de postulación
       Archivos: aplicacion/dtos/postulacion_dto.py
       Escenarios: 1, 2, 3, 4, 5, 6, 7
       Depende de: T-01, T-02
