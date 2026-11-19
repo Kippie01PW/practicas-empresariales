@@ -1,6 +1,6 @@
 """Componente centralizado de autorización basada en roles (RBAC) en la capa de Aplicación.
 
-Traza: CU-01, CU-02, CU-03, RN-01, RN-03, PA-02, ADR-002, ADR-004, ADR-005, Vista Lógica §2, Vista de Desarrollo §2.
+Traza: CU-01, CU-02, CU-03, CU-04, RN-01, RN-03, PA-02, ADR-002, ADR-004, ADR-005, Vista Lógica §2, Vista de Desarrollo §2.
 
 Implementa la política de autorización RBAC centralizada y contextual (Context-Based Access Control)
 bajo la regla 'deny-by-default' (ADR-005). Valida tanto el rol del actor autenticado como la
@@ -456,3 +456,46 @@ class AutorizadorRBAC:
             usuario_id=actor_id,
             operacion="asignar_tutor",
         )
+
+    def validar_registro_horas(
+        self,
+        rol_actor: str,
+        usuario_id: Optional[str] = None,
+        operacion: str = "registrar_horas",
+    ) -> None:
+        """Valida las autorizaciones específicas para el registro de horas semanales (CU-04).
+
+        Asegura que el actor posea estrictamente el rol 'Estudiante'
+        bajo política deny-by-default (ADR-005, EAC-03).
+
+        Args:
+            rol_actor: Rol presentado por el usuario autenticado.
+            usuario_id: Identificador del usuario (opcional).
+            operacion: Nombre de la operación evaluada ('registrar_horas').
+
+        Raises:
+            AccesoDenegadoError: Si el rol del actor no pertenece a los roles autorizados.
+        """
+        self.validar_rol(
+            rol_actor=rol_actor,
+            roles_permitidos=[RolUsuario.ESTUDIANTE.value],
+            operacion=operacion,
+            usuario_id=usuario_id,
+        )
+
+    def autorizar_comando_registro_horas(
+        self,
+        comando: Any,
+    ) -> None:
+        """Valida un comando de registro de horas (RegistrarHorasComando).
+
+        Aplica política deny-by-default verificando que rol_actor sea de Estudiante.
+        """
+        rol = getattr(comando, "rol_actor", None)
+        actor_id = getattr(comando, "actor_id", None)
+        self.validar_registro_horas(
+            rol_actor=rol,
+            usuario_id=actor_id,
+            operacion="registrar_horas",
+        )
+

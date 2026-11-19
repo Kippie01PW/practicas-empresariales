@@ -25,7 +25,7 @@
       Escenarios: 1, 2, 8, 12
       Depende de: T-02
 
-- [ ] T-06 Configurar y verificar reglas de autorización RBAC y pertenencia para registro de horas
+- [X] T-06 Configurar y verificar reglas de autorización RBAC y pertenencia para registro de horas
       Archivos: aplicacion/seguridad/autorizador_rbac.py
       Escenarios: 1, 9, 10, 11
       Depende de: ninguna
