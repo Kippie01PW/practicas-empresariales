@@ -65,7 +65,7 @@
       Escenarios: 5, 6, 7
       Depende de: T-07
 
-- [ ] T-14 Implementar adaptadores simulados de correo y contexto de identidad OIDC
+- [X] T-14 Implementar adaptadores simulados de correo y contexto de identidad OIDC
       Archivos: infraestructura/adaptadores/servicio_correo_simulado.py, infraestructura/seguridad/proveedor_identidad_simulado.py
       Escenarios: 1, 2, 3, 4, 5, 6
       Depende de: T-07, T-08
