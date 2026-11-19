@@ -1,12 +1,12 @@
 """Excepciones y errores de la capa de dominio.
 
-Traza: CU-01, CU-02, Escenarios 2, 3, 4 y 5 de spec.md, ADR-002, ADR-007, ADR-010.
+Traza: CU-01, CU-02, CU-03, Escenarios 1 a 7 de spec.md, ADR-002, ADR-005, ADR-007, ADR-010.
 
 Define las excepciones del modelo de dominio del sistema de gestión de prácticas
 empresariales. Estas excepciones encapsulan violaciones a invariantes y reglas
 fundamentales de negocio (e.g. prácticas activas simultáneas, falta de reglas
 normativas vigentes, transiciones no permitidas en el ciclo de vida, justificación
-obligatoria de rechazo y entidades no encontradas).
+obligatoria de rechazo, cupos de tutores excedidos y entidades no encontradas).
 """
 
 from __future__ import annotations
@@ -219,4 +219,104 @@ class DecisionPreviaEnFirmeError(TransicionEstadoInvalidaError):
             f"DecisionPreviaEnFirmeError("
             f"estado_actual={self.estado_actual!r}, "
             f"practica_id={self.practica_id!r})"
+        )
+
+
+class CupoDocenteExcedidoError(ErrorDominio):
+    """Excepción lanzada cuando un docente asesor ha alcanzado el límite de su cupo de tutorías.
+
+    Traza: CU-03, Escenario 2 (Intento de asignación a docente asesor que alcanzó su cupo máximo),
+    RT-01 (Capacidad máxima de tutorías por docente asesor).
+    """
+
+    def __init__(
+        self,
+        docente_id: str,
+        cupo_maximo: Optional[int] = None,
+        practicas_activas: Optional[int] = None,
+        mensaje: Optional[str] = None,
+    ) -> None:
+        self.docente_id: str = docente_id
+        self.cupo_maximo: Optional[int] = cupo_maximo
+        self.practicas_activas: Optional[int] = practicas_activas
+
+        if mensaje is None:
+            detalle_cupo = (
+                f" ({practicas_activas}/{cupo_maximo} prácticas activas)"
+                if cupo_maximo is not None and practicas_activas is not None
+                else ""
+            )
+            mensaje = (
+                f"El docente asesor '{docente_id}' ha alcanzado el límite máximo de su cupo disponible"
+                f"{detalle_cupo}. No se le pueden asignar más prácticas empresariales."
+            )
+
+        super().__init__(mensaje)
+
+    def __repr__(self) -> str:
+        return (
+            f"CupoDocenteExcedidoError("
+            f"docente_id={self.docente_id!r}, "
+            f"cupo_maximo={self.cupo_maximo!r}, "
+            f"practicas_activas={self.practicas_activas!r})"
+        )
+
+
+class DocenteAsesorNoEncontradoError(ErrorDominio):
+    """Excepción lanzada cuando el docente asesor no existe o no se encuentra habilitado.
+
+    Traza: CU-03, Escenario 3 (Intento de asignación a docente asesor inexistente o inactivo).
+    """
+
+    def __init__(
+        self,
+        docente_id: str,
+        mensaje: Optional[str] = None,
+    ) -> None:
+        self.docente_id: str = docente_id
+
+        if mensaje is None:
+            mensaje = (
+                f"El docente asesor especificado '{docente_id}' no existe o no se encuentra "
+                f"habilitado para asignación en el sistema."
+            )
+
+        super().__init__(mensaje)
+
+    def __repr__(self) -> str:
+        return f"DocenteAsesorNoEncontradoError(docente_id={self.docente_id!r})"
+
+
+class PracticaYaTieneTutorAsignadoError(DecisionPreviaEnFirmeError):
+    """Excepción lanzada cuando se intenta asignar tutor a una práctica que ya cuenta con uno.
+
+    Traza: CU-03, Escenario 5 (Intento de asignación sobre práctica que ya cuenta con docente asesor asignado).
+    """
+
+    def __init__(
+        self,
+        practica_id: str,
+        docente_asesor_id: Optional[str] = None,
+        mensaje: Optional[str] = None,
+    ) -> None:
+        self.docente_asesor_id: Optional[str] = docente_asesor_id
+
+        if mensaje is None:
+            detalle_tutor = f" (docente asesor actual: '{docente_asesor_id}')" if docente_asesor_id else ""
+            mensaje = (
+                f"La práctica '{practica_id}' ya cuenta con un docente asesor asignado en firme"
+                f"{detalle_tutor}. No se permite realizar una nueva asignación."
+            )
+
+        super().__init__(
+            estado_actual="Asignada",
+            practica_id=practica_id,
+            mensaje=mensaje,
+        )
+
+    def __repr__(self) -> str:
+        return (
+            f"PracticaYaTieneTutorAsignadoError("
+            f"practica_id={self.practica_id!r}, "
+            f"docente_asesor_id={self.docente_asesor_id!r})"
         )

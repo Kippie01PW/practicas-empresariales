@@ -1,6 +1,6 @@
 # Tareas: 003 Asignar docente asesor o tutor
 
-- [ ] T-01 Incorporar excepciones de dominio para asignación de tutor y control de cupos
+- [X] T-01 Incorporar excepciones de dominio para asignación de tutor y control de cupos
       Archivos: dominio/errores.py
       Escenarios: 2, 3, 4, 5
       Depende de: ninguna
