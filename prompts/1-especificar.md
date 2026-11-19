@@ -35,6 +35,13 @@ Característica: <nombre de la funcionalidad>
 - Cada escenario se debe poder comprobar con un sí o un no: datos concretos, nada de "rápido", "fácil" o "adecuado".
 - Usar los términos del glosario de docs/arquitectura.md.
 - Describir comportamiento, no implementación: nada de clases, tablas, pantallas ni tecnologías.
-- No inventar reglas de negocio. Si falta información, listarla al final en una sección "Preguntas abiertas".
+- No inventar requisitos. Donde falte información, escribir en ese mismo lugar el comentario `# [NECESITA ACLARACIÓN: <pregunta concreta>]` (con `#` delante, para que siga siendo Gherkin válido) y seguir con lo demás.
+- Al terminar, listar todas las marcas `[NECESITA ACLARACIÓN]` que dejó.
 - No escribir código.
 - Al terminar, detenerse y esperar revisión.
+
+## Revisión de la persona
+
+- Verificar cada escenario contra el caso de uso y completar en este mismo `spec.md` lo que falte.
+- Resolver cada marca `[NECESITA ACLARACIÓN]` y borrarla. La revisión termina cuando no queda ninguna.
+- Confirmar que la columna "Se especifica en" de `docs/drivers.md` enlaza a esta carpeta.
