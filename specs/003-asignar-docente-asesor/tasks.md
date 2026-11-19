@@ -5,7 +5,7 @@
       Escenarios: 2, 3, 4, 5
       Depende de: ninguna
 
-- [ ] T-02 Crear modelo de dominio DocenteAsesor con control de cupos y carga de tutorías
+- [X] T-02 Crear modelo de dominio DocenteAsesor con control de cupos y carga de tutorías
       Archivos: dominio/modelos/docente_asesor.py
       Escenarios: 1, 2
       Depende de: T-01
