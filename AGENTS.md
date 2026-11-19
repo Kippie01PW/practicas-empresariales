@@ -4,6 +4,7 @@ Reglas permanentes del proyecto. Se le entregan al agente al inicio de cada sesi
 
 ## Fuentes de verdad
 
+- `docs/arquitectura.md`: mapa general de arquitectura (arc42), síntesis de drivers, vistas 4+1, ADRs y glosario.
 - `docs/contexto.md`: visión global, objetivos y alcance del sistema.
 - `docs/drivers.md`, sección 1: catálogo de casos de uso (CU-01 a CU-15). Es la lista canónica de funcionalidades del sistema.
 - `docs/drivers.md`, secciones 2 a 5: escenarios de atributos de calidad (EAC), restricciones (RT/RN), preocupaciones arquitectónicas (PA) y matriz de priorización.
