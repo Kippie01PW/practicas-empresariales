@@ -20,7 +20,7 @@
       Escenarios: 1, 2
       Depende de: ninguna
 
-- [ ] T-05 Definir puerto de repositorio para RegistroHoras
+- [X] T-05 Definir puerto de repositorio para RegistroHoras
       Archivos: aplicacion/puertos/repositorio_registro_horas.py
       Escenarios: 1, 2, 8, 12
       Depende de: T-02
