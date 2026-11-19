@@ -45,7 +45,7 @@
       Escenarios: 1, 2, 7, 8, 9, 11
       Depende de: T-01, T-02
 
-- [ ] T-10 Implementar repositorio en memoria para TokenEvaluacion y actualizar persistencia de Practica y RegistroHoras
+- [X] T-10 Implementar repositorio en memoria para TokenEvaluacion y actualizar persistencia de Practica y RegistroHoras
       Archivos: infraestructura/adaptadores/repositorio_memoria.py
       Escenarios: 1, 2, 4, 7, 8, 9, 11
       Depende de: T-02, T-03, T-04, T-06

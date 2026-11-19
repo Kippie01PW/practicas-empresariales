@@ -1,11 +1,12 @@
-"""Adaptadores de persistencia en memoria para Práctica, ReglaPrograma, DocenteAsesor, RegistroHoras y Bitácora.
+"""Adaptadores de persistencia en memoria para Práctica, ReglaPrograma, DocenteAsesor, RegistroHoras, TokenEvaluacion y Bitácora.
 
-Traza: CU-01, CU-02, CU-03, CU-04, CU-12, EAC-01, EAC-02, EAC-03, RT-01, ADR-001, ADR-002, ADR-003, ADR-006, ADR-007, ADR-010.
+Traza: CU-01, CU-02, CU-03, CU-04, CU-05, CU-12, EAC-01, EAC-02, EAC-03, RT-01, ADR-001, ADR-002, ADR-003, ADR-004, ADR-006, ADR-007, ADR-010.
 Vista Lógica §2, Vista de Desarrollo §2.
 
 Implementa los puertos `RepositorioPracticaPort`, `RepositorioReglaProgramaPort`,
-`RepositorioDocentePort` y `RepositorioRegistroHorasPort` utilizando estructuras en memoria
-deterministas para pruebas y validación sin dependencias externas ni bases de datos reales en esta etapa (ADR-002, ADR-003).
+`RepositorioDocentePort`, `RepositorioRegistroHorasPort` y `RepositorioTokenEvaluacionPort`
+utilizando estructuras en memoria deterministas para pruebas y validación sin dependencias
+externas ni bases de datos reales en esta etapa (ADR-002, ADR-003, ADR-004).
 """
 
 from __future__ import annotations
@@ -16,12 +17,14 @@ from aplicacion.puertos.repositorio_docente import RepositorioDocentePort
 from aplicacion.puertos.repositorio_practica import RepositorioPracticaPort
 from aplicacion.puertos.repositorio_registro_horas import RepositorioRegistroHorasPort
 from aplicacion.puertos.repositorio_regla import RepositorioReglaProgramaPort
+from aplicacion.puertos.repositorio_token_evaluacion import RepositorioTokenEvaluacionPort
 from dominio.modelos.docente_asesor import DocenteAsesor
 from dominio.modelos.evento_bitacora import EventoBitacora
 from dominio.modelos.intento_validacion import IntentoValidacion
 from dominio.modelos.practica import EstadoPractica, Practica
 from dominio.modelos.registro_horas import RegistroHoras
 from dominio.modelos.regla_programa import EstadoVigenciaRegla, ReglaPrograma
+from dominio.modelos.token_evaluacion import TokenEvaluacion
 
 
 class InMemoryRepositorioPractica(RepositorioPracticaPort):
@@ -232,4 +235,44 @@ class InMemoryRepositorioRegistroHoras(RepositorioRegistroHorasPort):
     def limpiar(self) -> None:
         """Limpia los registros almacenados (útil para pruebas)."""
         self._registros.clear()
+
+
+class InMemoryRepositorioTokenEvaluacion(RepositorioTokenEvaluacionPort):
+    """Implementación en memoria del puerto RepositorioTokenEvaluacionPort.
+
+    Traza: CU-05, EAC-03, ADR-002, ADR-004.
+
+    Almacena tokens efímeros para la validación de horas y evaluación de desempeño
+    por parte de supervisores externos, permitiendo búsquedas por cadena de token y por id.
+    """
+
+    def __init__(self, tokens_iniciales: Optional[list[TokenEvaluacion]] = None) -> None:
+        self._tokens_por_id: dict[str, TokenEvaluacion] = {}
+        self._tokens_por_str: dict[str, TokenEvaluacion] = {}
+        if tokens_iniciales:
+            for token in tokens_iniciales:
+                self.guardar(token)
+
+    def guardar(self, token: TokenEvaluacion) -> None:
+        """Persiste o actualiza un token en el almacén en memoria."""
+        self._tokens_por_id[token.id] = token
+        self._tokens_por_str[token.token] = token
+
+    def buscar_por_token(self, token: str) -> Optional[TokenEvaluacion]:
+        """Recupera un TokenEvaluacion a partir de su cadena criptográfica."""
+        return self._tokens_por_str.get(token.strip())
+
+    def buscar_por_id(self, token_id: str) -> Optional[TokenEvaluacion]:
+        """Recupera un TokenEvaluacion a partir de su identificador único."""
+        return self._tokens_por_id.get(token_id.strip())
+
+    def listar_todos(self) -> list[TokenEvaluacion]:
+        """Retorna todos los tokens almacenados."""
+        return list(self._tokens_por_id.values())
+
+    def limpiar(self) -> None:
+        """Limpia los tokens almacenados (útil para pruebas)."""
+        self._tokens_por_id.clear()
+        self._tokens_por_str.clear()
+
 
