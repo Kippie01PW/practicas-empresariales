@@ -25,7 +25,7 @@
       Escenarios: 1, 2, 3, 4, 5, 6, 7
       Depende de: T-01, T-02
 
-- [ ] T-06 Definir puertos de persistencia (RepositorioPracticaPort y RepositorioReglaProgramaPort)
+- [X] T-06 Definir puertos de persistencia (RepositorioPracticaPort y RepositorioReglaProgramaPort)
       Archivos: aplicacion/puertos/repositorio_practica.py, aplicacion/puertos/repositorio_regla.py
       Escenarios: 1, 2, 3, 4, 5, 6, 7
       Depende de: T-01, T-02, T-03

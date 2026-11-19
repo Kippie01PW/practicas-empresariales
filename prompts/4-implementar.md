@@ -20,5 +20,5 @@ El código de esa única tarea.
 - Al terminar:
   1. Marcar la casilla de la tarea en tasks.md.
   2. Listar los archivos creados o cambiados.
-  3. Proponer el mensaje de commit: `T-<xx> <título de la tarea> (<CU-xx>)`.
+  3. Proponer el mensaje de commit: `T-<xx>: <título de la tarea> (<CU-xx>)`.
   4. Detenerse y esperar revisión.
