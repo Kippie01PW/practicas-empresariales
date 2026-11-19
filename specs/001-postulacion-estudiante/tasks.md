@@ -15,7 +15,7 @@
       Escenarios: 1, 2, 5, 6, 7
       Depende de: ninguna
 
-- [ ] T-04 Definir excepciones y errores de dominio
+- [X] T-04 Definir excepciones y errores de dominio
       Archivos: dominio/errores.py
       Escenarios: 1, 2, 3, 4, 5
       Depende de: ninguna
