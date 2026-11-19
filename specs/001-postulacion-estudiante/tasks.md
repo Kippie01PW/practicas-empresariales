@@ -55,7 +55,7 @@
       Escenarios: 1, 2, 3, 4, 5, 6, 7
       Depende de: T-06
 
-- [ ] T-12 Implementar adaptador simulado para Servicio de Registro Académico (SIA) con Circuit Breaker y timeout
+- [X] T-12 Implementar adaptador simulado para Servicio de Registro Académico (SIA) con Circuit Breaker y timeout
       Archivos: infraestructura/adaptadores/cliente_sia_simulado.py
       Escenarios: 1, 2, 5, 6, 7
       Depende de: T-07
