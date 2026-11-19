@@ -30,6 +30,7 @@ from dataclasses import dataclass
 from aplicacion.casos_uso.asignar_docente_asesor import AsignarDocenteAsesorCasoUso
 from aplicacion.casos_uso.evaluar_postulacion import EvaluarPostulacionCasoUso
 from aplicacion.casos_uso.postular_estudiante import PostularEstudianteCasoUso
+from aplicacion.casos_uso.registrar_horas import RegistrarHorasCasoUso
 from aplicacion.casos_uso.reintentar_validacion_sia import ReintentarValidacionSiaCasoUso
 from aplicacion.dtos.asignacion_docente_dto import (
     AsignacionDocenteRespuestaDTO,
@@ -43,6 +44,10 @@ from aplicacion.dtos.postulacion_dto import (
     PostulacionRespuestaDTO,
     PostularEstudianteComando,
 )
+from aplicacion.dtos.registro_horas_dto import (
+    RegistrarHorasComando,
+    RegistroHorasRespuestaDTO,
+)
 from aplicacion.seguridad.autorizador_rbac import AutorizadorRBAC, RolUsuario
 from dominio.modelos.docente_asesor import DocenteAsesor
 from dominio.modelos.regla_programa import EstadoVigenciaRegla, ReglaPrograma
@@ -51,6 +56,7 @@ from infraestructura.adaptadores.cliente_sia_simulado import AdaptadorSiaSimulad
 from infraestructura.adaptadores.repositorio_memoria import (
     InMemoryRepositorioDocente,
     InMemoryRepositorioPractica,
+    InMemoryRepositorioRegistroHoras,
     InMemoryRepositorioReglaPrograma,
 )
 from infraestructura.adaptadores.servicio_correo_simulado import AdaptadorCorreoSimulado
@@ -72,6 +78,7 @@ class SistemaPracticasEmpresariales:
     caso_uso_reintentar_sia: ReintentarValidacionSiaCasoUso
     caso_uso_evaluar: EvaluarPostulacionCasoUso
     caso_uso_asignar_docente: AsignarDocenteAsesorCasoUso
+    caso_uso_registrar_horas: RegistrarHorasCasoUso
 
     # Componentes de seguridad y autorización
     autorizador_rbac: AutorizadorRBAC
@@ -81,6 +88,7 @@ class SistemaPracticasEmpresariales:
     repositorio_practica: InMemoryRepositorioPractica
     repositorio_regla: InMemoryRepositorioReglaPrograma
     repositorio_docente: InMemoryRepositorioDocente
+    repositorio_registro_horas: InMemoryRepositorioRegistroHoras
     servicio_sia: AdaptadorSiaSimulado
     broker_mensajes: InMemoryBrokerMensajes
     servicio_correo: AdaptadorCorreoSimulado
@@ -104,6 +112,7 @@ def inicializar_sistema(
     repo_practica = InMemoryRepositorioPractica()
     repo_regla = InMemoryRepositorioReglaPrograma()
     repo_docente = InMemoryRepositorioDocente()
+    repo_registro_horas = InMemoryRepositorioRegistroHoras()
     servicio_sia = AdaptadorSiaSimulado(umbral_fallos=umbral_fallos_sia)
     broker_mensajes = InMemoryBrokerMensajes()
     servicio_correo = AdaptadorCorreoSimulado()
@@ -201,16 +210,24 @@ def inicializar_sistema(
         autorizador_rbac=autorizador_rbac,
     )
 
+    caso_uso_registrar_horas = RegistrarHorasCasoUso(
+        repositorio_practica=repo_practica,
+        repositorio_registro_horas=repo_registro_horas,
+        autorizador_rbac=autorizador_rbac,
+    )
+
     return SistemaPracticasEmpresariales(
         caso_uso_postular=caso_uso_postular,
         caso_uso_reintentar_sia=caso_uso_reintentar_sia,
         caso_uso_evaluar=caso_uso_evaluar,
         caso_uso_asignar_docente=caso_uso_asignar_docente,
+        caso_uso_registrar_horas=caso_uso_registrar_horas,
         autorizador_rbac=autorizador_rbac,
         proveedor_identidad=proveedor_identidad,
         repositorio_practica=repo_practica,
         repositorio_regla=repo_regla,
         repositorio_docente=repo_docente,
+        repositorio_registro_horas=repo_registro_horas,
         servicio_sia=servicio_sia,
         broker_mensajes=broker_mensajes,
         servicio_correo=servicio_correo,
@@ -236,7 +253,8 @@ def main() -> int:
     print("    - Casos de Uso Disponibles: PostularEstudianteCasoUso (CU-01),")
     print("                                ReintentarValidacionSiaCasoUso (CU-01),")
     print("                                EvaluarPostulacionCasoUso (CU-02),")
-    print("                                AsignarDocenteAsesorCasoUso (CU-03)")
+    print("                                AsignarDocenteAsesorCasoUso (CU-03),")
+    print("                                RegistrarHorasCasoUso (CU-04)")
 
     # Demostración del Escenario 1: Postulación exitosa
     print("\n--- Demostración CU-01: Postulación exitosa (Escenario 1) ---")
@@ -310,6 +328,30 @@ def main() -> int:
             print(f"Nueva carga tutor:   {docente_actualizado.practicas_activas}/{docente_actualizado.cupo_maximo_practicas}")
         eventos = sistema.repositorio_practica.buscar_eventos_por_entidad(f"Practica:{practica_asignada.id}")
         print(f"Total eventos en bitácora: {len(eventos)}")
+
+    # Demostración CU-04: Registro semanal de horas y transición formal a EnEjecucion
+    print("\n--- Demostración CU-04: Registro de Horas y Transición a EnEjecucion (Escenario 2) ---")
+    comando_horas_s1 = RegistrarHorasComando(
+        practica_id=respuesta.practica_id or "",
+        semana=1,
+        cantidad_horas=40,
+        descripcion_actividades="Inducción institucional e inicio de actividades técnicas de desarrollo",
+        actor_id=doc_demo,
+        rol_actor=RolUsuario.ESTUDIANTE.value,
+        ip_origen="192.168.1.100",
+    )
+    respuesta_horas_s1: RegistroHorasRespuestaDTO = sistema.caso_uso_registrar_horas(comando_horas_s1)
+    print(f"Resultado Horas S1:   {respuesta_horas_s1.estado_validacion}")
+    print(f"Estado Práctica:     {respuesta_horas_s1.estado_practica}")
+    print(f"Mensaje:             {respuesta_horas_s1.mensaje}")
+
+    practica_en_ejecucion = sistema.repositorio_practica.buscar_por_id(respuesta.practica_id or "")
+    if practica_en_ejecucion:
+        print(f"Estado formal en BD: {practica_en_ejecucion.estado_actual.value}")
+        reportes = sistema.repositorio_registro_horas.listar_por_practica(practica_en_ejecucion.id)
+        print(f"Reportes semanales registrados: {len(reportes)}")
+        eventos = sistema.repositorio_practica.buscar_eventos_por_entidad(f"Practica:{practica_en_ejecucion.id}")
+        print(f"Total eventos en bitácora:     {len(eventos)}")
 
     print("\n[OK] El sistema de gestión de prácticas está listo y operativo.")
     return 0

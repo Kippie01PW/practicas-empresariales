@@ -40,7 +40,7 @@
       Escenarios: 1, 2, 8, 12
       Depende de: T-02, T-03, T-05
 
-- [ ] T-09 Integrar repositorio de horas y caso de uso en main.py
+- [X] T-09 Integrar repositorio de horas y caso de uso en main.py
       Archivos: main.py
       Escenarios: 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12
       Depende de: T-07, T-08
