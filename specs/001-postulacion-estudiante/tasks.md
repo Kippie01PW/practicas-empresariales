@@ -50,7 +50,7 @@
       Escenarios: 6, 7
       Depende de: T-01, T-02, T-03, T-04, T-06, T-07
 
-- [ ] T-11 Implementar repositorios en memoria para Práctica, Regla y Bitácora
+- [X] T-11 Implementar repositorios en memoria para Práctica, Regla y Bitácora
       Archivos: infraestructura/adaptadores/repositorio_memoria.py
       Escenarios: 1, 2, 3, 4, 5, 6, 7
       Depende de: T-06
