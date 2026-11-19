@@ -336,10 +336,40 @@ class ValidarHorasRegistradasCasoUso:
         """
         token: Optional[TokenEvaluacion] = None
 
-        if self._interceptor_identidad is not None:
-            token = self._interceptor_identidad.verificar_token(token_str)
-        elif self._repositorio_token_evaluacion is not None:
-            token = self._repositorio_token_evaluacion.buscar_por_token(token_str)
+        try:
+            if self._interceptor_identidad is not None:
+                token = self._interceptor_identidad.verificar_token(token_str)
+            elif self._repositorio_token_evaluacion is not None:
+                token = self._repositorio_token_evaluacion.buscar_por_token(token_str)
+        except TokenEvaluacionInvalidoError as err:
+            self._registrar_bitacora(
+                actor_id="DESCONOCIDO",
+                rol="DESCONOCIDO",
+                ip=ip_origen,
+                accion="Intento de acceso con enlace alterado o firma HMAC inválida",
+                entidad=f"Practica:{practica_id_esperada}",
+            )
+            raise err
+        except TokenEvaluacionYaUsadoError as err:
+            self._registrar_bitacora(
+                actor_id="DESCONOCIDO",
+                rol=RolUsuario.SUPERVISOR_EMPRESA.value,
+                ip=ip_origen,
+                accion="Intento de acceso con enlace de un solo uso ya utilizado",
+                entidad=f"Practica:{practica_id_esperada}",
+                detalles={"token_id": err.token_id},
+            )
+            raise err
+        except TokenEvaluacionExpiradoError as err:
+            self._registrar_bitacora(
+                actor_id="DESCONOCIDO",
+                rol=RolUsuario.SUPERVISOR_EMPRESA.value,
+                ip=ip_origen,
+                accion="Intento de acceso con enlace expirado",
+                entidad=f"Practica:{practica_id_esperada}",
+                detalles={"token_id": err.token_id},
+            )
+            raise err
 
         if token is None:
             self._registrar_bitacora(

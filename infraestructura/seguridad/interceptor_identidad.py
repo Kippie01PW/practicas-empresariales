@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import hashlib
 import hmac
+import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
@@ -72,7 +73,8 @@ class InterceptorIdentidad:
         """
         emision = fecha_emision or datetime.now(timezone.utc)
         expiracion = emision + timedelta(days=duracion_dias)
-        payload = f"{practica_id.strip()}:{supervisor_id.strip()}:{int(emision.timestamp())}"
+        nonce = uuid.uuid4().hex[:8]
+        payload = f"{practica_id.strip()}:{supervisor_id.strip()}:{int(emision.timestamp())}:{nonce}"
         firma = self.calcular_firma(payload)
         token_cadena = f"ml_{payload}_{firma}"
 
