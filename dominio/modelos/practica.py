@@ -18,6 +18,7 @@ from typing import Optional
 from dominio.errores import (
     DecisionPreviaEnFirmeError,
     MotivoRechazoRequeridoError,
+    PracticaYaTieneTutorAsignadoError,
     TransicionEstadoInvalidaError,
 )
 
@@ -117,6 +118,7 @@ class Practica:
         "_fecha_inicio",
         "_fecha_fin",
         "_motivo_rechazo",
+        "_docente_asesor_id",
     )
 
     def __init__(
@@ -128,6 +130,7 @@ class Practica:
         fecha_postulacion: datetime | None = None,
         id: str | None = None,
         motivo_rechazo: Optional[str] = None,
+        docente_asesor_id: Optional[str] = None,
     ) -> None:
         self._id: str = id or str(uuid.uuid4())
         self._estudiante_id: str = estudiante_id
@@ -138,6 +141,7 @@ class Practica:
         self._fecha_inicio: Optional[datetime] = None
         self._fecha_fin: Optional[datetime] = None
         self._motivo_rechazo: Optional[str] = motivo_rechazo
+        self._docente_asesor_id: Optional[str] = docente_asesor_id
 
     # -- Propiedades de solo lectura ----------------------------------------
 
@@ -176,6 +180,10 @@ class Practica:
     @property
     def motivo_rechazo(self) -> Optional[str]:
         return self._motivo_rechazo
+
+    @property
+    def docente_asesor_id(self) -> Optional[str]:
+        return self._docente_asesor_id
 
     # -- Métodos de transición de estado (spec.md, plan.md) -----------------
 
@@ -243,6 +251,43 @@ class Practica:
 
         self._transicionar(EstadoPractica.RECHAZADA)
 
+    def asignar_tutor(self, docente_asesor_id: str) -> None:
+        """Transición a ``Asignada`` vinculando al docente asesor (CU-03, escenarios 1, 4 y 5).
+
+        Válida únicamente cuando la práctica se encuentra en estado ``Aprobada`` y aún
+        no cuenta con un docente asesor asignado en firme.
+
+        Args:
+            docente_asesor_id: Identificador del DocenteAsesor a vincular.
+
+        Raises:
+            PracticaYaTieneTutorAsignadoError: Si la práctica ya cuenta con tutor asignado o está en Asignada.
+            TransicionEstadoInvalidaError: Si la práctica se encuentra en un estado distinto a Aprobada.
+            ValueError: Si el identificador del docente asesor es vacío.
+        """
+        if self._docente_asesor_id is not None or self._estado_actual == EstadoPractica.ASIGNADA:
+            raise PracticaYaTieneTutorAsignadoError(
+                practica_id=self._id,
+                docente_asesor_id=self._docente_asesor_id,
+            )
+
+        if self._estado_actual != EstadoPractica.APROBADA:
+            raise TransicionEstadoInvalidaError(
+                estado_origen=self._estado_actual.value,
+                estado_destino=EstadoPractica.ASIGNADA.value,
+                practica_id=self._id,
+                mensaje=(
+                    f"Solo se puede asignar un docente asesor a prácticas que se encuentren "
+                    f"en estado 'Aprobada' (estado actual: '{self._estado_actual.value}')."
+                ),
+            )
+
+        if not docente_asesor_id or not docente_asesor_id.strip():
+            raise ValueError("El identificador del docente asesor no puede estar vacío.")
+
+        self._docente_asesor_id = docente_asesor_id.strip()
+        self._transicionar(EstadoPractica.ASIGNADA)
+
     # -- Consultas de dominio -----------------------------------------------
 
     def es_activa(self) -> bool:
@@ -293,8 +338,10 @@ class Practica:
     # -- Representación -----------------------------------------------------
 
     def __repr__(self) -> str:
+        tutor_repr = f", tutor={self._docente_asesor_id!r}" if self._docente_asesor_id else ""
         return (
             f"Practica(id={self._id!r}, "
             f"estudiante_id={self._estudiante_id!r}, "
-            f"estado={self._estado_actual.value!r})"
+            f"estado={self._estado_actual.value!r}"
+            f"{tutor_repr})"
         )

@@ -10,7 +10,7 @@
       Escenarios: 1, 2
       Depende de: T-01
 
-- [ ] T-03 Actualizar entidad de dominio Práctica con vinculación de tutor y transición a Asignada
+- [X] T-03 Actualizar entidad de dominio Práctica con vinculación de tutor y transición a Asignada
       Archivos: dominio/modelos/practica.py
       Escenarios: 1, 4, 5
       Depende de: T-01
