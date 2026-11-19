@@ -1,6 +1,6 @@
 """Entidad raíz Practica y enumeración EstadoPractica.
 
-Traza: CU-01, CU-02, ADR-010 (Máquina de Estados Finitos), ADR-007 (Reglas versionadas).
+Traza: CU-01, CU-02, CU-03, CU-04, ADR-010 (Máquina de Estados Finitos), ADR-007 (Reglas versionadas).
 
 La entidad ``Practica`` encapsula el ciclo de vida completo de una práctica
 empresarial mediante una máquina de estados finitos interna.  Solo se exponen
@@ -17,6 +17,7 @@ from typing import Optional
 
 from dominio.errores import (
     DecisionPreviaEnFirmeError,
+    EstadoPracticaInvalidoParaRegistroHorasError,
     MotivoRechazoRequeridoError,
     PracticaYaTieneTutorAsignadoError,
     TransicionEstadoInvalidaError,
@@ -288,7 +289,40 @@ class Practica:
         self._docente_asesor_id = docente_asesor_id.strip()
         self._transicionar(EstadoPractica.ASIGNADA)
 
+    def iniciar_ejecucion(self, fecha_inicio: Optional[datetime] = None) -> None:
+        """Transición a ``EnEjecucion`` (CU-04, escenario 2).
+
+        Válida únicamente cuando la práctica se encuentra en estado ``Asignada``
+        con docente asesor previamente asignado.
+
+        Args:
+            fecha_inicio: Fecha y hora de inicio de ejecución (default: ahora).
+
+        Raises:
+            TransicionEstadoInvalidaError: Si la práctica no se encuentra en estado Asignada.
+        """
+        if self._estado_actual != EstadoPractica.ASIGNADA:
+            raise TransicionEstadoInvalidaError(
+                estado_origen=self._estado_actual.value,
+                estado_destino=EstadoPractica.EN_EJECUCION.value,
+                practica_id=self._id,
+                mensaje=(
+                    f"Solo se puede iniciar la ejecución de prácticas que se encuentren "
+                    f"en estado 'Asignada' (estado actual: '{self._estado_actual.value}')."
+                ),
+            )
+        self._fecha_inicio = fecha_inicio or datetime.now()
+        self._transicionar(EstadoPractica.EN_EJECUCION)
+
     # -- Consultas de dominio -----------------------------------------------
+
+    def puede_registrar_horas(self) -> bool:
+        """Indica si la práctica se encuentra habilitada para registrar horas semanales.
+
+        Los estados habilitados son ``Asignada`` (que transiciona a ``EnEjecucion``
+        con el primer reporte) y ``EnEjecucion`` (CU-04, escenarios 1, 2 y 3).
+        """
+        return self._estado_actual in {EstadoPractica.ASIGNADA, EstadoPractica.EN_EJECUCION}
 
     def es_activa(self) -> bool:
         """Indica si la práctica se encuentra en un estado activo en curso.

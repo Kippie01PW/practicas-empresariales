@@ -10,7 +10,7 @@
       Escenarios: 1, 4, 5, 6, 7
       Depende de: T-01
 
-- [ ] T-03 Actualizar entidad Practica con transición a EnEjecucion y validación de estado para registro de horas
+- [X] T-03 Actualizar entidad Practica con transición a EnEjecucion y validación de estado para registro de horas
       Archivos: dominio/modelos/practica.py
       Escenarios: 1, 2, 3
       Depende de: T-01
