@@ -20,7 +20,7 @@
       Escenarios: 1, 2, 5
       Depende de: T-01
 
-- [ ] T-05 Crear DTOs inmutables para comando y respuesta de validación de horas
+- [X] T-05 Crear DTOs inmutables para comando y respuesta de validación de horas
       Archivos: aplicacion/dtos/validacion_horas_dto.py
       Escenarios: 1, 2, 3
       Depende de: ninguna
