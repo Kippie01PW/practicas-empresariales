@@ -50,7 +50,7 @@
       Escenarios: 1, 2, 4, 7, 8, 9, 11
       Depende de: T-02, T-03, T-04, T-06
 
-- [ ] T-11 Integrar repositorios, interceptor de identidad y caso de uso en main.py
+- [X] T-11 Integrar repositorios, interceptor de identidad y caso de uso en main.py
       Archivos: main.py
       Escenarios: 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11
       Depende de: T-08, T-09, T-10

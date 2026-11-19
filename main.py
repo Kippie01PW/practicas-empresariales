@@ -32,6 +32,7 @@ from aplicacion.casos_uso.evaluar_postulacion import EvaluarPostulacionCasoUso
 from aplicacion.casos_uso.postular_estudiante import PostularEstudianteCasoUso
 from aplicacion.casos_uso.registrar_horas import RegistrarHorasCasoUso
 from aplicacion.casos_uso.reintentar_validacion_sia import ReintentarValidacionSiaCasoUso
+from aplicacion.casos_uso.validar_horas_registradas import ValidarHorasRegistradasCasoUso
 from aplicacion.dtos.asignacion_docente_dto import (
     AsignacionDocenteRespuestaDTO,
     AsignarDocenteComando,
@@ -48,6 +49,10 @@ from aplicacion.dtos.registro_horas_dto import (
     RegistrarHorasComando,
     RegistroHorasRespuestaDTO,
 )
+from aplicacion.dtos.validacion_horas_dto import (
+    ValidacionHorasRespuestaDTO,
+    ValidarHorasComando,
+)
 from aplicacion.seguridad.autorizador_rbac import AutorizadorRBAC, RolUsuario
 from dominio.modelos.docente_asesor import DocenteAsesor
 from dominio.modelos.regla_programa import EstadoVigenciaRegla, ReglaPrograma
@@ -58,8 +63,10 @@ from infraestructura.adaptadores.repositorio_memoria import (
     InMemoryRepositorioPractica,
     InMemoryRepositorioRegistroHoras,
     InMemoryRepositorioReglaPrograma,
+    InMemoryRepositorioTokenEvaluacion,
 )
 from infraestructura.adaptadores.servicio_correo_simulado import AdaptadorCorreoSimulado
+from infraestructura.seguridad.interceptor_identidad import InterceptorIdentidad
 from infraestructura.seguridad.proveedor_identidad_simulado import (
     ProveedorIdentidadSimulado,
 )
@@ -79,16 +86,19 @@ class SistemaPracticasEmpresariales:
     caso_uso_evaluar: EvaluarPostulacionCasoUso
     caso_uso_asignar_docente: AsignarDocenteAsesorCasoUso
     caso_uso_registrar_horas: RegistrarHorasCasoUso
+    caso_uso_validar_horas: ValidarHorasRegistradasCasoUso
 
     # Componentes de seguridad y autorización
     autorizador_rbac: AutorizadorRBAC
     proveedor_identidad: ProveedorIdentidadSimulado
+    interceptor_identidad: InterceptorIdentidad
 
     # Adaptadores de infraestructura
     repositorio_practica: InMemoryRepositorioPractica
     repositorio_regla: InMemoryRepositorioReglaPrograma
     repositorio_docente: InMemoryRepositorioDocente
     repositorio_registro_horas: InMemoryRepositorioRegistroHoras
+    repositorio_token: InMemoryRepositorioTokenEvaluacion
     servicio_sia: AdaptadorSiaSimulado
     broker_mensajes: InMemoryBrokerMensajes
     servicio_correo: AdaptadorCorreoSimulado
@@ -113,13 +123,15 @@ def inicializar_sistema(
     repo_regla = InMemoryRepositorioReglaPrograma()
     repo_docente = InMemoryRepositorioDocente()
     repo_registro_horas = InMemoryRepositorioRegistroHoras()
+    repo_token = InMemoryRepositorioTokenEvaluacion()
     servicio_sia = AdaptadorSiaSimulado(umbral_fallos=umbral_fallos_sia)
     broker_mensajes = InMemoryBrokerMensajes()
     servicio_correo = AdaptadorCorreoSimulado()
     proveedor_identidad = ProveedorIdentidadSimulado()
 
-    # 2. Componentes de seguridad de la capa de aplicación
+    # 2. Componentes de seguridad de la capa de aplicación e infraestructura
     autorizador_rbac = AutorizadorRBAC()
+    interceptor_identidad = InterceptorIdentidad(repositorio_token=repo_token)
 
     # 3. Precarga de reglas de programa vigentes (ADR-007) y tutores académicos (RT-01)
     if precargar_reglas_ejemplo:
@@ -216,18 +228,30 @@ def inicializar_sistema(
         autorizador_rbac=autorizador_rbac,
     )
 
+    caso_uso_validar_horas = ValidarHorasRegistradasCasoUso(
+        repositorio_practica=repo_practica,
+        repositorio_registro_horas=repo_registro_horas,
+        repositorio_token_evaluacion=repo_token,
+        servicio_correo=servicio_correo,
+        autorizador_rbac=autorizador_rbac,
+        interceptor_identidad=interceptor_identidad,
+    )
+
     return SistemaPracticasEmpresariales(
         caso_uso_postular=caso_uso_postular,
         caso_uso_reintentar_sia=caso_uso_reintentar_sia,
         caso_uso_evaluar=caso_uso_evaluar,
         caso_uso_asignar_docente=caso_uso_asignar_docente,
         caso_uso_registrar_horas=caso_uso_registrar_horas,
+        caso_uso_validar_horas=caso_uso_validar_horas,
         autorizador_rbac=autorizador_rbac,
         proveedor_identidad=proveedor_identidad,
+        interceptor_identidad=interceptor_identidad,
         repositorio_practica=repo_practica,
         repositorio_regla=repo_regla,
         repositorio_docente=repo_docente,
         repositorio_registro_horas=repo_registro_horas,
+        repositorio_token=repo_token,
         servicio_sia=servicio_sia,
         broker_mensajes=broker_mensajes,
         servicio_correo=servicio_correo,
@@ -246,15 +270,18 @@ def main() -> int:
     print("    - Repositorio de Prácticas: InMemoryRepositorioPractica")
     print("    - Repositorio de Reglas:    InMemoryRepositorioReglaPrograma")
     print("    - Repositorio de Docentes:  InMemoryRepositorioDocente")
+    print("    - Repositorio de Horas:     InMemoryRepositorioRegistroHoras")
+    print("    - Repositorio de Tokens:    InMemoryRepositorioTokenEvaluacion")
     print("    - Servicio SIA:             AdaptadorSiaSimulado (Circuit Breaker activo)")
     print("    - Bróker de Mensajería:     InMemoryBrokerMensajes (Tareas + DLQ)")
     print("    - Servicio de Correo:       AdaptadorCorreoSimulado")
-    print("    - Identidad y RBAC:         ProveedorIdentidadSimulado + AutorizadorRBAC")
+    print("    - Identidad y RBAC:         ProveedorIdentidadSimulado + InterceptorIdentidad + AutorizadorRBAC")
     print("    - Casos de Uso Disponibles: PostularEstudianteCasoUso (CU-01),")
     print("                                ReintentarValidacionSiaCasoUso (CU-01),")
     print("                                EvaluarPostulacionCasoUso (CU-02),")
     print("                                AsignarDocenteAsesorCasoUso (CU-03),")
-    print("                                RegistrarHorasCasoUso (CU-04)")
+    print("                                RegistrarHorasCasoUso (CU-04),")
+    print("                                ValidarHorasRegistradasCasoUso (CU-05)")
 
     # Demostración del Escenario 1: Postulación exitosa
     print("\n--- Demostración CU-01: Postulación exitosa (Escenario 1) ---")
@@ -351,6 +378,40 @@ def main() -> int:
         reportes = sistema.repositorio_registro_horas.listar_por_practica(practica_en_ejecucion.id)
         print(f"Reportes semanales registrados: {len(reportes)}")
         eventos = sistema.repositorio_practica.buscar_eventos_por_entidad(f"Practica:{practica_en_ejecucion.id}")
+        print(f"Total eventos en bitácora:     {len(eventos)}")
+
+    # Demostración CU-05: Validación y aprobación de horas por supervisor con Magic Link
+    print("\n--- Demostración CU-05: Validación de Horas por Supervisor con Magic Link (Escenario 1) ---")
+    supervisor_demo_id = "sup_alfa_001"
+    # Vincular supervisor a la práctica para pertenencia contextual (RN-01)
+    if practica_en_ejecucion:
+        object.__setattr__(practica_en_ejecucion, "_supervisor_empresa_id", supervisor_demo_id)
+        sistema.repositorio_practica.actualizar(practica_en_ejecucion)
+
+    token_eval = sistema.interceptor_identidad.generar_token(
+        practica_id=respuesta.practica_id or "",
+        supervisor_id=supervisor_demo_id,
+    )
+    print(f"Token efímero emitido: {token_eval.token[:35]}...")
+    print(f"Vigencia del enlace:   15 días (Expira: {token_eval.fecha_expiracion.isoformat()})")
+
+    reportes_previos = sistema.repositorio_registro_horas.listar_por_practica(respuesta.practica_id or "")
+    if reportes_previos:
+        rep_s1 = reportes_previos[0]
+        comando_validar = ValidarHorasComando(
+            practica_id=respuesta.practica_id or "",
+            registro_horas_id=rep_s1.id,
+            decision="Aprobar",
+            token_acceso=token_eval.token,
+            ip_origen="192.168.1.80",
+        )
+        respuesta_val: ValidacionHorasRespuestaDTO = sistema.caso_uso_validar_horas(comando_validar)
+        print(f"Decisión Supervisor:  {respuesta_val.estado_validacion}")
+        print(f"Horas acumuladas:     {respuesta_val.horas_acumuladas_practica} horas")
+        print(f"Token consumido:      {token_eval.usado}")
+        print(f"Mensaje:              {respuesta_val.mensaje}")
+
+        eventos = sistema.repositorio_practica.buscar_eventos_por_entidad(f"Practica:{respuesta.practica_id}")
         print(f"Total eventos en bitácora:     {len(eventos)}")
 
     print("\n[OK] El sistema de gestión de prácticas está listo y operativo.")
