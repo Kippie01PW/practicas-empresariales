@@ -112,7 +112,15 @@ class AutorizadorRBAC:
             RolUsuario.COORDINADOR.value,
             RolUsuario.COORDINADOR_PRACTICAS.value,
         },
+        "evaluar_postulacion": {
+            RolUsuario.COORDINADOR.value,
+            RolUsuario.COORDINADOR_PRACTICAS.value,
+        },
         "aprobar_postulacion": {
+            RolUsuario.COORDINADOR.value,
+            RolUsuario.COORDINADOR_PRACTICAS.value,
+        },
+        "rechazar_postulacion": {
             RolUsuario.COORDINADOR.value,
             RolUsuario.COORDINADOR_PRACTICAS.value,
         },
@@ -160,6 +168,8 @@ class AutorizadorRBAC:
         "coordinador": RolUsuario.COORDINADOR.value,
         "coordinadorpracticas": RolUsuario.COORDINADOR_PRACTICAS.value,
         "coordinador_practicas": RolUsuario.COORDINADOR_PRACTICAS.value,
+        "coordinador de prácticas": RolUsuario.COORDINADOR_PRACTICAS.value,
+        "coordinador de practicas": RolUsuario.COORDINADOR_PRACTICAS.value,
         "supervisor": RolUsuario.SUPERVISOR.value,
         "supervisorempresa": RolUsuario.SUPERVISOR_EMPRESA.value,
         "supervisor_empresa": RolUsuario.SUPERVISOR_EMPRESA.value,
@@ -348,4 +358,56 @@ class AutorizadorRBAC:
             rol_actor=rol,
             estudiante_id=estudiante_id,
             usuario_id=usuario_id,
+        )
+
+    def validar_evaluacion_postulacion(
+        self,
+        rol_actor: str,
+        usuario_id: Optional[str] = None,
+        operacion: str = "evaluar_postulacion",
+    ) -> None:
+        """Valida las autorizaciones específicas para el caso de uso de evaluación de postulación (CU-02).
+
+        Asegura que el actor posea estrictamente el rol 'Coordinador' o 'CoordinadorPracticas'
+        bajo política deny-by-default (ADR-005, EAC-03).
+
+        Args:
+            rol_actor: Rol presentado por el usuario autenticado.
+            usuario_id: Identificador del usuario (opcional).
+            operacion: Nombre de la operación evaluada ('evaluar_postulacion', 'aprobar_postulacion', 'rechazar_postulacion').
+
+        Raises:
+            AccesoDenegadoError: Si el rol del actor no pertenece a los roles de Coordinador autorizados.
+        """
+        self.validar_rol(
+            rol_actor=rol_actor,
+            roles_permitidos=[
+                RolUsuario.COORDINADOR.value,
+                RolUsuario.COORDINADOR_PRACTICAS.value,
+            ],
+            operacion=operacion,
+            usuario_id=usuario_id,
+        )
+
+    def autorizar_comando_evaluacion(
+        self,
+        comando: Any,
+    ) -> None:
+        """Valida un comando de evaluación de postulación (EvaluarPostulacionComando).
+
+        Aplica política deny-by-default verificando que rol_actor sea de Coordinador.
+        """
+        rol = getattr(comando, "rol_actor", None)
+        actor_id = getattr(comando, "actor_id", None)
+        operacion = (
+            "aprobar_postulacion"
+            if getattr(comando, "es_aprobacion", False)
+            else "rechazar_postulacion"
+            if getattr(comando, "es_rechazo", False)
+            else "evaluar_postulacion"
+        )
+        self.validar_evaluacion_postulacion(
+            rol_actor=rol,
+            usuario_id=actor_id,
+            operacion=operacion,
         )

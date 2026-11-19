@@ -15,7 +15,7 @@
       Escenarios: 1, 2, 3
       Depende de: ninguna
 
-- [ ] T-04 Configurar reglas y permisos de RBAC para Coordinador de prácticas
+- [X] T-04 Configurar reglas y permisos de RBAC para Coordinador de prácticas
       Archivos: aplicacion/seguridad/autorizador_rbac.py
       Escenarios: 1, 2, 6, 7
       Depende de: ninguna
