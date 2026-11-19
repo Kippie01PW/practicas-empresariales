@@ -1,6 +1,6 @@
 """Componente centralizado de autorización basada en roles (RBAC) en la capa de Aplicación.
 
-Traza: CU-01, RN-01, RN-03, PA-02, ADR-002, ADR-004, ADR-005, Vista Lógica §2, Vista de Desarrollo §2.
+Traza: CU-01, CU-02, CU-03, RN-01, RN-03, PA-02, ADR-002, ADR-004, ADR-005, Vista Lógica §2, Vista de Desarrollo §2.
 
 Implementa la política de autorización RBAC centralizada y contextual (Context-Based Access Control)
 bajo la regla 'deny-by-default' (ADR-005). Valida tanto el rol del actor autenticado como la
@@ -410,4 +410,49 @@ class AutorizadorRBAC:
             rol_actor=rol,
             usuario_id=actor_id,
             operacion=operacion,
+        )
+
+    def validar_asignacion_tutor(
+        self,
+        rol_actor: str,
+        usuario_id: Optional[str] = None,
+        operacion: str = "asignar_tutor",
+    ) -> None:
+        """Valida las autorizaciones específicas para asignación de docente asesor (CU-03).
+
+        Asegura que el actor posea estrictamente el rol 'Coordinador' o 'CoordinadorPracticas'
+        bajo política deny-by-default (ADR-005, EAC-03).
+
+        Args:
+            rol_actor: Rol presentado por el usuario autenticado.
+            usuario_id: Identificador del usuario (opcional).
+            operacion: Nombre de la operación evaluada ('asignar_tutor').
+
+        Raises:
+            AccesoDenegadoError: Si el rol del actor no pertenece a los roles de Coordinador autorizados.
+        """
+        self.validar_rol(
+            rol_actor=rol_actor,
+            roles_permitidos=[
+                RolUsuario.COORDINADOR.value,
+                RolUsuario.COORDINADOR_PRACTICAS.value,
+            ],
+            operacion=operacion,
+            usuario_id=usuario_id,
+        )
+
+    def autorizar_comando_asignacion(
+        self,
+        comando: Any,
+    ) -> None:
+        """Valida un comando de asignación de tutor (AsignarDocenteComando).
+
+        Aplica política deny-by-default verificando que rol_actor sea de Coordinador.
+        """
+        rol = getattr(comando, "rol_actor", None)
+        actor_id = getattr(comando, "actor_id", None)
+        self.validar_asignacion_tutor(
+            rol_actor=rol,
+            usuario_id=actor_id,
+            operacion="asignar_tutor",
         )

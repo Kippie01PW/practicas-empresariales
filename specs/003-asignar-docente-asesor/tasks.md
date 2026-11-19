@@ -25,7 +25,7 @@
       Escenarios: 1, 2, 3
       Depende de: T-02
 
-- [ ] T-06 Configurar permisos y acciones RBAC para asignación de docente asesor
+- [X] T-06 Configurar permisos y acciones RBAC para asignación de docente asesor
       Archivos: aplicacion/seguridad/autorizador_rbac.py
       Escenarios: 1, 6, 7
       Depende de: ninguna
