@@ -15,7 +15,7 @@
       Escenarios: 1, 2, 3, 4
       Depende de: T-01
 
-- [ ] T-04 Actualizar entidad Practica con acumulador de horas aprobadas y validación de estado EnEjecucion
+- [X] T-04 Actualizar entidad Practica con acumulador de horas aprobadas y validación de estado EnEjecucion
       Archivos: dominio/modelos/practica.py
       Escenarios: 1, 2, 5
       Depende de: T-01

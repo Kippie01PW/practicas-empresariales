@@ -1,6 +1,6 @@
 """Entidad raíz Practica y enumeración EstadoPractica.
 
-Traza: CU-01, CU-02, CU-03, CU-04, ADR-010 (Máquina de Estados Finitos), ADR-007 (Reglas versionadas).
+Traza: CU-01, CU-02, CU-03, CU-04, CU-05, ADR-010 (Máquina de Estados Finitos), ADR-007 (Reglas versionadas).
 
 La entidad ``Practica`` encapsula el ciclo de vida completo de una práctica
 empresarial mediante una máquina de estados finitos interna.  Solo se exponen
@@ -18,6 +18,7 @@ from typing import Optional
 from dominio.errores import (
     DecisionPreviaEnFirmeError,
     EstadoPracticaInvalidoParaRegistroHorasError,
+    EstadoPracticaInvalidoParaValidarHorasError,
     MotivoRechazoRequeridoError,
     PracticaYaTieneTutorAsignadoError,
     TransicionEstadoInvalidaError,
@@ -120,6 +121,7 @@ class Practica:
         "_fecha_fin",
         "_motivo_rechazo",
         "_docente_asesor_id",
+        "_supervisor_empresa_id",
     )
 
     def __init__(
@@ -132,17 +134,20 @@ class Practica:
         id: str | None = None,
         motivo_rechazo: Optional[str] = None,
         docente_asesor_id: Optional[str] = None,
+        supervisor_empresa_id: Optional[str] = None,
+        horas_acumuladas_aprobadas: int = 0,
     ) -> None:
         self._id: str = id or str(uuid.uuid4())
         self._estudiante_id: str = estudiante_id
         self._regla_programa_id: str = regla_programa_id
         self._estado_actual: EstadoPractica = estado_inicial
         self._fecha_postulacion: datetime = fecha_postulacion or datetime.now()
-        self._horas_acumuladas_aprobadas: int = 0
+        self._horas_acumuladas_aprobadas: int = horas_acumuladas_aprobadas
         self._fecha_inicio: Optional[datetime] = None
         self._fecha_fin: Optional[datetime] = None
         self._motivo_rechazo: Optional[str] = motivo_rechazo
         self._docente_asesor_id: Optional[str] = docente_asesor_id
+        self._supervisor_empresa_id: Optional[str] = supervisor_empresa_id
 
     # -- Propiedades de solo lectura ----------------------------------------
 
@@ -185,6 +190,11 @@ class Practica:
     @property
     def docente_asesor_id(self) -> Optional[str]:
         return self._docente_asesor_id
+
+    @property
+    def supervisor_empresa_id(self) -> Optional[str]:
+        """Identificador del supervisor de empresa asignado a la práctica (ADR-004, CU-05)."""
+        return self._supervisor_empresa_id
 
     # -- Métodos de transición de estado (spec.md, plan.md) -----------------
 
@@ -323,6 +333,48 @@ class Practica:
         con el primer reporte) y ``EnEjecucion`` (CU-04, escenarios 1, 2 y 3).
         """
         return self._estado_actual in {EstadoPractica.ASIGNADA, EstadoPractica.EN_EJECUCION}
+
+    def puede_validar_horas(self) -> bool:
+        """Indica si la práctica se encuentra habilitada para validar reportes de horas.
+
+        Traza: CU-05, Escenario 5, plan.md. ADR-010 (Máquina de estados finitos).
+
+        Solo las prácticas en estado formal ``EnEjecucion`` admiten validación de horas
+        por parte del supervisor de empresa.
+
+        Returns:
+            True si la práctica está en estado EnEjecucion; False en cualquier otro caso.
+        """
+        return self._estado_actual == EstadoPractica.EN_EJECUCION
+
+    def acumular_horas_aprobadas(self, cantidad_horas: int) -> None:
+        """Suma al acumulado de horas aprobadas la cantidad indicada.
+
+        Traza: CU-05, Escenario 1 (Aprobación exitosa de un reporte semanal de horas),
+        plan.md. ADR-010 (Máquina de estados finitos).
+
+        Precondición: la práctica debe estar en estado ``EnEjecucion``. Si se encuentra
+        en cualquier otro estado, lanza EstadoPracticaInvalidoParaValidarHorasError
+        (Escenario 5). La cantidad de horas debe ser mayor a 0.
+
+        Args:
+            cantidad_horas: Número de horas aprobadas a acumular (entero positivo).
+
+        Raises:
+            EstadoPracticaInvalidoParaValidarHorasError: Si la práctica no está en EnEjecucion.
+            ValueError: Si cantidad_horas es menor o igual a 0.
+        """
+        if self._estado_actual != EstadoPractica.EN_EJECUCION:
+            raise EstadoPracticaInvalidoParaValidarHorasError(
+                practica_id=self._id,
+                estado_actual=self._estado_actual.value,
+            )
+        if cantidad_horas <= 0:
+            raise ValueError(
+                f"La cantidad de horas a acumular debe ser un valor positivo mayor a 0 "
+                f"(recibido: {cantidad_horas})."
+            )
+        self._horas_acumuladas_aprobadas += cantidad_horas
 
     def es_activa(self) -> bool:
         """Indica si la práctica se encuentra en un estado activo en curso.
