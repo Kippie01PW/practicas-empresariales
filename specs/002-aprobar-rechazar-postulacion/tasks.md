@@ -5,7 +5,7 @@
       Escenarios: 2, 3, 4, 5
       Depende de: ninguna
 
-- [ ] T-02 Actualizar entidad de dominio Práctica con transiciones de aprobación y rechazo justificado
+- [X] T-02 Actualizar entidad de dominio Práctica con transiciones de aprobación y rechazo justificado
       Archivos: dominio/modelos/practica.py
       Escenarios: 1, 2, 3, 4, 5
       Depende de: T-01
