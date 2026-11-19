@@ -30,7 +30,7 @@
       Escenarios: 1, 2, 3, 4, 5, 6, 7
       Depende de: T-01, T-02, T-03
 
-- [ ] T-07 Definir puertos de servicios externos e integración (Registro Académico, Bróker y Correo)
+- [X] T-07 Definir puertos de servicios externos e integración (Registro Académico, Bróker y Correo)
       Archivos: aplicacion/puertos/servicio_registro_academico.py, aplicacion/puertos/publicador_eventos.py, aplicacion/puertos/servicio_correo.py
       Escenarios: 1, 2, 5, 6, 7
       Depende de: T-01, T-02, T-03
