@@ -1,2 +1,26 @@
+# Documentos generados
 word_docs/
 
+# Bytecode y caché de Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyc
+*.pyo
+*.pyd
+
+# Pruebas y cobertura
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Entornos virtuales
+.venv/
+venv/
+env/
+ENV/
+
+# Archivos temporales y de diagnóstico local
+scratch/
+.idea/
+.vscode/
