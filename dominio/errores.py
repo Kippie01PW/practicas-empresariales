@@ -1,13 +1,14 @@
 """Excepciones y errores de la capa de dominio.
 
-Traza: CU-01, CU-02, CU-03, CU-04, ADR-002, ADR-005, ADR-007, ADR-010.
+Traza: CU-01, CU-02, CU-03, CU-04, CU-05, ADR-002, ADR-004, ADR-005,
+ADR-006, ADR-007, ADR-010.
 
 Define las excepciones del modelo de dominio del sistema de gestión de prácticas
 empresariales. Estas excepciones encapsulan violaciones a invariantes y reglas
 fundamentales de negocio (e.g. prácticas activas simultáneas, falta de reglas
 normativas vigentes, transiciones no permitidas en el ciclo de vida, justificación
-obligatoria de rechazo, cupos de tutores excedidos, registros de horas inválidos
-y entidades no encontradas).
+obligatoria de rechazo, cupos de tutores excedidos, registros de horas inválidos,
+credenciales tokenizadas efímeras y validación contextual de horas registradas).
 """
 
 from __future__ import annotations
@@ -465,5 +466,258 @@ class EstadoPracticaInvalidoParaRegistroHorasError(ErrorDominio):
             f"EstadoPracticaInvalidoParaRegistroHorasError("
             f"practica_id={self.practica_id!r}, "
             f"estado_actual={self.estado_actual!r})"
+        )
+
+
+# ---------------------------------------------------------------------------
+# CU-05: Excepciones para validación de horas registradas y credenciales
+#        tokenizadas (ADR-004, ADR-005, ADR-006, ADR-010)
+# ---------------------------------------------------------------------------
+
+
+class TokenEvaluacionInvalidoError(ErrorDominio):
+    """Excepción lanzada cuando un token presenta firma inválida, parámetros adulterados o formato erróneo.
+
+    Traza: CU-05, Escenario 8 (Intento de acceso mediante enlace criptográfico alterado o firma HMAC
+    inválida), EAC-03, ADR-004 (Autenticación híbrida con enlaces criptográficos efímeros).
+
+    Se activa cuando el interceptor de identidad detecta que la firma HMAC del enlace no coincide
+    con los parámetros provistos, garantizando 0 datos expuestos (EAC-03).
+    """
+
+    def __init__(
+        self,
+        mensaje: Optional[str] = None,
+    ) -> None:
+        if mensaje is None:
+            mensaje = (
+                "El token de acceso presentado no es válido: la firma criptográfica HMAC es incorrecta "
+                "o los parámetros del enlace han sido adulterados. Acceso denegado."
+            )
+        super().__init__(mensaje)
+
+    def __repr__(self) -> str:
+        return "TokenEvaluacionInvalidoError()"
+
+
+class TokenEvaluacionExpiradoError(ErrorDominio):
+    """Excepción lanzada cuando el enlace o token supera los 15 días de emisión.
+
+    Traza: CU-05, Escenario 7 (Intento de acceso mediante enlace criptográfico con más de 15 días
+    de emisión), EAC-03, ADR-004.
+
+    Se activa cuando la fecha de emisión del token supera el límite de 15 días calendario.
+    El evento de acceso expirado debe registrarse en bitácora en menos de 1 minuto (EAC-03).
+    """
+
+    def __init__(
+        self,
+        token_id: Optional[str] = None,
+        mensaje: Optional[str] = None,
+    ) -> None:
+        self.token_id: Optional[str] = token_id
+
+        if mensaje is None:
+            detalle = f" (token '{token_id}')" if token_id else ""
+            mensaje = (
+                f"El enlace criptográfico{detalle} ha expirado: su fecha de emisión supera "
+                f"los 15 días calendario permitidos. Solicite un nuevo enlace."
+            )
+        super().__init__(mensaje)
+
+    def __repr__(self) -> str:
+        return f"TokenEvaluacionExpiradoError(token_id={self.token_id!r})"
+
+
+class TokenEvaluacionYaUsadoError(ErrorDominio):
+    """Excepción lanzada al intentar reutilizar un enlace de un solo uso consumido.
+
+    Traza: CU-05, Escenario 9 (Intento de acceso mediante enlace criptográfico de un solo uso
+    previamente utilizado), ADR-004.
+
+    Los tokens de Magic Link son de un solo uso: una vez consumidos para asentar una validación
+    en firme, no pueden ser reutilizados.
+    """
+
+    def __init__(
+        self,
+        token_id: Optional[str] = None,
+        mensaje: Optional[str] = None,
+    ) -> None:
+        self.token_id: Optional[str] = token_id
+
+        if mensaje is None:
+            detalle = f" (token '{token_id}')" if token_id else ""
+            mensaje = (
+                f"El enlace criptográfico{detalle} ya ha sido utilizado previamente para asentar "
+                f"una validación en firme. No es posible reutilizar un enlace de un solo uso."
+            )
+        super().__init__(mensaje)
+
+    def __repr__(self) -> str:
+        return f"TokenEvaluacionYaUsadoError(token_id={self.token_id!r})"
+
+
+class ReporteHorasYaEvaluadoError(ErrorDominio):
+    """Excepción lanzada cuando se intenta evaluar un reporte de horas que ya fue aprobado o rechazado.
+
+    Traza: CU-05, Escenario 4 (Intento de validación sobre un reporte de horas que ya fue evaluado
+    previamente), ADR-010.
+
+    La entidad RegistroHoras controla las transiciones de su estado de validación;
+    no se permite reevaluar un reporte que ya cuenta con una decisión en firme.
+    """
+
+    def __init__(
+        self,
+        registro_horas_id: Optional[str] = None,
+        estado_actual: Optional[str] = None,
+        semana: Optional[int] = None,
+        mensaje: Optional[str] = None,
+    ) -> None:
+        self.registro_horas_id: Optional[str] = registro_horas_id
+        self.estado_actual: Optional[str] = estado_actual
+        self.semana: Optional[int] = semana
+
+        if mensaje is None:
+            detalle_semana = f" de la semana {semana}" if semana is not None else ""
+            detalle_estado = f" (estado actual: '{estado_actual}')" if estado_actual else ""
+            detalle_id = f" '{registro_horas_id}'" if registro_horas_id else ""
+            mensaje = (
+                f"El reporte de horas{detalle_id}{detalle_semana} ya cuenta con una validación "
+                f"en firme{detalle_estado}. No se permite reevaluar un reporte previamente resuelto."
+            )
+        super().__init__(mensaje)
+
+    def __repr__(self) -> str:
+        return (
+            f"ReporteHorasYaEvaluadoError("
+            f"registro_horas_id={self.registro_horas_id!r}, "
+            f"estado_actual={self.estado_actual!r}, "
+            f"semana={self.semana!r})"
+        )
+
+
+class MotivoRechazoHorasRequeridoError(ErrorDominio):
+    """Excepción lanzada cuando se intenta rechazar un reporte de horas sin observaciones descriptivas.
+
+    Traza: CU-05, Escenario 3 (Rechazo fallido por ausencia de justificación u observaciones
+    obligatorias), RN-02.
+
+    El rechazo de un reporte semanal de horas requiere obligatoriamente una observación
+    descriptiva no vacía (RN-02).
+    """
+
+    def __init__(
+        self,
+        registro_horas_id: Optional[str] = None,
+        mensaje: Optional[str] = None,
+    ) -> None:
+        self.registro_horas_id: Optional[str] = registro_horas_id
+
+        if mensaje is None:
+            detalle = f" para el reporte '{registro_horas_id}'" if registro_horas_id else ""
+            mensaje = (
+                f"La justificación u observación de rechazo es obligatoria{detalle}. "
+                f"No se permite rechazar un reporte de horas sin indicar el motivo."
+            )
+        super().__init__(mensaje)
+
+    def __repr__(self) -> str:
+        return f"MotivoRechazoHorasRequeridoError(registro_horas_id={self.registro_horas_id!r})"
+
+
+class EstadoPracticaInvalidoParaValidarHorasError(ErrorDominio):
+    """Excepción lanzada cuando la práctica se encuentra en un estado que no admite validación de horas.
+
+    Traza: CU-05, Escenario 5 (Intento de validación sobre una práctica en estado no permitido por
+    la máquina de estados), ADR-010.
+
+    Solo se pueden validar reportes de horas en prácticas formalizadas en estado 'EnEjecucion'.
+    """
+
+    def __init__(
+        self,
+        practica_id: Optional[str] = None,
+        estado_actual: Optional[str] = None,
+        mensaje: Optional[str] = None,
+    ) -> None:
+        self.practica_id: Optional[str] = practica_id
+        self.estado_actual: Optional[str] = estado_actual
+
+        if mensaje is None:
+            detalle_id = f" '{practica_id}'" if practica_id else ""
+            detalle_estado = f" (estado actual: '{estado_actual}')" if estado_actual else ""
+            mensaje = (
+                f"Solo se pueden validar reportes de horas en prácticas formalizadas en estado "
+                f"'EnEjecucion'. La práctica{detalle_id} no se encuentra en dicho estado{detalle_estado}."
+            )
+        super().__init__(mensaje)
+
+    def __repr__(self) -> str:
+        return (
+            f"EstadoPracticaInvalidoParaValidarHorasError("
+            f"practica_id={self.practica_id!r}, "
+            f"estado_actual={self.estado_actual!r})"
+        )
+
+
+class RegistroHorasNoEncontradoError(ErrorDominio):
+    """Excepción lanzada cuando el identificador del reporte de horas no existe en el sistema.
+
+    Traza: CU-05, ADR-002.
+    """
+
+    def __init__(
+        self,
+        registro_horas_id: str,
+        mensaje: Optional[str] = None,
+    ) -> None:
+        self.registro_horas_id: str = registro_horas_id
+
+        if mensaje is None:
+            mensaje = (
+                f"No se encontró ningún reporte de horas registrado con el identificador "
+                f"'{registro_horas_id}'."
+            )
+        super().__init__(mensaje)
+
+    def __repr__(self) -> str:
+        return f"RegistroHorasNoEncontradoError(registro_horas_id={self.registro_horas_id!r})"
+
+
+class SupervisorNoAsignadoAPracticaError(ErrorDominio):
+    """Excepción lanzada ante violación de pertenencia contextual del supervisor a la práctica.
+
+    Traza: CU-05, Escenario 6 (Intento de validación sobre un reporte de horas de una práctica
+    ajena al supervisor), RN-01, ADR-005 (Control de acceso RBAC centralizado).
+
+    Un supervisor solo puede validar reportes de horas de la práctica que le fue asignada
+    formalmente. El intento de acceder a prácticas ajenas es bloqueado sin exponer datos.
+    """
+
+    def __init__(
+        self,
+        supervisor_id: Optional[str] = None,
+        practica_id: Optional[str] = None,
+        mensaje: Optional[str] = None,
+    ) -> None:
+        self.supervisor_id: Optional[str] = supervisor_id
+        self.practica_id: Optional[str] = practica_id
+
+        if mensaje is None:
+            detalle_sup = f" '{supervisor_id}'" if supervisor_id else ""
+            detalle_prac = f" a la práctica '{practica_id}'" if practica_id else ""
+            mensaje = (
+                f"Violación de pertenencia contextual: El supervisor{detalle_sup} no está asignado "
+                f"{detalle_prac}. Acceso denegado bajo la regla de pertenencia contextual (RN-01)."
+            )
+        super().__init__(mensaje)
+
+    def __repr__(self) -> str:
+        return (
+            f"SupervisorNoAsignadoAPracticaError("
+            f"supervisor_id={self.supervisor_id!r}, "
+            f"practica_id={self.practica_id!r})"
         )
 

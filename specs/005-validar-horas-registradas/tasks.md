@@ -1,6 +1,6 @@
 # Tareas: 005 Validar horas registradas
 
-- [ ] T-01 Incorporar excepciones de dominio para validación de horas y credenciales tokenizadas
+- [X] T-01 Incorporar excepciones de dominio para validación de horas y credenciales tokenizadas
       Archivos: dominio/errores.py
       Escenarios: 3, 4, 5, 6, 7, 8, 9, 10, 11
       Depende de: ninguna
