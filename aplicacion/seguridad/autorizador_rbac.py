@@ -1,0 +1,351 @@
+"""Componente centralizado de autorización basada en roles (RBAC) en la capa de Aplicación.
+
+Traza: CU-01, RN-01, RN-03, PA-02, ADR-002, ADR-004, ADR-005, Vista Lógica §2, Vista de Desarrollo §2.
+
+Implementa la política de autorización RBAC centralizada y contextual (Context-Based Access Control)
+bajo la regla 'deny-by-default' (ADR-005). Valida tanto el rol del actor autenticado como la
+pertenencia de los recursos según la identidad del usuario (e.g. un estudiante solo puede postularse
+a sí mismo y ver sus datos, RN-01).
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from enum import Enum
+from typing import Any, Iterable, Optional, Union
+
+from dominio.errores import ErrorDominio
+from dominio.modelos.estudiante import Estudiante
+
+
+class RolUsuario(str, Enum):
+    """Roles formales definidos en el sistema de prácticas empresariales (RN-03, ADR-005)."""
+
+    ESTUDIANTE = "Estudiante"
+    DOCENTE = "Docente"
+    DOCENTE_ASESOR = "DocenteAsesor"
+    COORDINADOR = "Coordinador"
+    COORDINADOR_PRACTICAS = "CoordinadorPracticas"
+    SUPERVISOR = "Supervisor"
+    SUPERVISOR_EMPRESA = "SupervisorEmpresa"
+
+
+@dataclass(frozen=True, slots=True)
+class ContextoUsuario:
+    """Contexto inmutable de identidad del usuario autenticado (ADR-004, ADR-005).
+
+    Atributos:
+        usuario_id: Identificador único del usuario o sujeto autenticado.
+        rol: Rol autenticado del usuario (ej. 'Estudiante', 'Docente', 'Coordinador').
+        documento: Documento de identidad (opcional, aplicable a estudiantes y docentes).
+        correo: Correo electrónico institucional o corporativo.
+        ip_origen: Dirección IP del cliente para trazabilidad y bitácora (ADR-006).
+    """
+
+    usuario_id: str
+    rol: str
+    documento: Optional[str] = None
+    correo: Optional[str] = None
+    ip_origen: str = "127.0.0.1"
+
+    def __post_init__(self) -> None:
+        if not self.usuario_id or not self.usuario_id.strip():
+            raise ValueError("El identificador de usuario no puede estar vacío.")
+        if not self.rol or not self.rol.strip():
+            raise ValueError("El rol del usuario no puede estar vacío.")
+        object.__setattr__(self, "usuario_id", self.usuario_id.strip())
+        object.__setattr__(self, "rol", self.rol.strip())
+        if self.documento is not None:
+            object.__setattr__(self, "documento", self.documento.strip())
+        if self.correo is not None:
+            object.__setattr__(self, "correo", self.correo.strip())
+        if self.ip_origen is not None:
+            object.__setattr__(self, "ip_origen", self.ip_origen.strip())
+
+
+class AccesoDenegadoError(ErrorDominio):
+    """Excepción lanzada cuando una operación o recurso es denegado por el Autorizador RBAC (ADR-005).
+
+    Se arroja ante violaciones de roles, operaciones no permitidas o quebrantamiento
+    del contexto de pertenencia de datos (política deny-by-default, RN-01, RN-03).
+    """
+
+    def __init__(
+        self,
+        mensaje: str,
+        *,
+        rol_actor: Optional[str] = None,
+        operacion: Optional[str] = None,
+        usuario_id: Optional[str] = None,
+    ) -> None:
+        self.rol_actor: Optional[str] = rol_actor
+        self.operacion: Optional[str] = operacion
+        self.usuario_id: Optional[str] = usuario_id
+        super().__init__(mensaje)
+
+    def __repr__(self) -> str:
+        return (
+            f"AccesoDenegadoError("
+            f"mensaje={self.mensaje!r}, "
+            f"rol_actor={self.rol_actor!r}, "
+            f"operacion={self.operacion!r}, "
+            f"usuario_id={self.usuario_id!r})"
+        )
+
+
+class AutorizadorRBAC:
+    """Componente transversal de autorización RBAC centralizado en la capa de Aplicación.
+
+    Aplica una política estricta de *deny-by-default* (ADR-005): cualquier operación
+    no registrada explícitamente o cualquier actor sin el rol requerido es denegado.
+    Asimismo, valida el contexto de pertenencia (un estudiante solo accede a sus propios
+    datos, previniendo suplantaciones y cumpliendo la Ley 1581 / RN-01).
+    """
+
+    # Matriz canónica de operaciones y roles permitidos (deny-by-default)
+    _MATRIZ_PERMISOS: dict[str, set[str]] = {
+        "postular_practica": {
+            RolUsuario.ESTUDIANTE.value,
+        },
+        "consultar_postulacion": {
+            RolUsuario.ESTUDIANTE.value,
+            RolUsuario.COORDINADOR.value,
+            RolUsuario.COORDINADOR_PRACTICAS.value,
+        },
+        "aprobar_postulacion": {
+            RolUsuario.COORDINADOR.value,
+            RolUsuario.COORDINADOR_PRACTICAS.value,
+        },
+        "asignar_tutor": {
+            RolUsuario.COORDINADOR.value,
+            RolUsuario.COORDINADOR_PRACTICAS.value,
+        },
+        "registrar_horas": {
+            RolUsuario.ESTUDIANTE.value,
+        },
+        "aprobar_horas": {
+            RolUsuario.SUPERVISOR.value,
+            RolUsuario.SUPERVISOR_EMPRESA.value,
+            RolUsuario.DOCENTE.value,
+            RolUsuario.DOCENTE_ASESOR.value,
+        },
+        "evaluar_desempeno": {
+            RolUsuario.SUPERVISOR.value,
+            RolUsuario.SUPERVISOR_EMPRESA.value,
+        },
+        "generar_acta": {
+            RolUsuario.DOCENTE.value,
+            RolUsuario.DOCENTE_ASESOR.value,
+        },
+        "aprobar_acta_docente": {
+            RolUsuario.DOCENTE.value,
+            RolUsuario.DOCENTE_ASESOR.value,
+        },
+        "aprobar_acta_coordinador": {
+            RolUsuario.COORDINADOR.value,
+            RolUsuario.COORDINADOR_PRACTICAS.value,
+        },
+        "configurar_reglas": {
+            RolUsuario.COORDINADOR.value,
+            RolUsuario.COORDINADOR_PRACTICAS.value,
+        },
+    }
+
+    # Alias reconocidos para normalización flexible de roles
+    _ALIAS_ROLES: dict[str, str] = {
+        "estudiante": RolUsuario.ESTUDIANTE.value,
+        "docente": RolUsuario.DOCENTE.value,
+        "docenteasesor": RolUsuario.DOCENTE_ASESOR.value,
+        "docente_asesor": RolUsuario.DOCENTE_ASESOR.value,
+        "coordinador": RolUsuario.COORDINADOR.value,
+        "coordinadorpracticas": RolUsuario.COORDINADOR_PRACTICAS.value,
+        "coordinador_practicas": RolUsuario.COORDINADOR_PRACTICAS.value,
+        "supervisor": RolUsuario.SUPERVISOR.value,
+        "supervisorempresa": RolUsuario.SUPERVISOR_EMPRESA.value,
+        "supervisor_empresa": RolUsuario.SUPERVISOR_EMPRESA.value,
+    }
+
+    @classmethod
+    def normalizar_rol(cls, rol: str) -> str:
+        """Normaliza el nombre de un rol al formato estándar."""
+        if not rol or not rol.strip():
+            return ""
+        clave = rol.strip().lower()
+        return cls._ALIAS_ROLES.get(clave, rol.strip())
+
+    def validar_rol(
+        self,
+        rol_actor: str,
+        roles_permitidos: Iterable[str],
+        operacion: Optional[str] = None,
+        usuario_id: Optional[str] = None,
+    ) -> None:
+        """Verifica que el rol del actor pertenezca al conjunto de roles permitidos.
+
+        Política deny-by-default: si roles_permitidos está vacío o None, deniega el acceso.
+
+        Args:
+            rol_actor: Rol presentado por el usuario autenticado.
+            roles_permitidos: Colección de roles que tienen autorización.
+            operacion: Nombre de la operación (opcional, para diagnóstico y trazabilidad).
+            usuario_id: Identificador del usuario (opcional).
+
+        Raises:
+            AccesoDenegadoError: Si el rol del actor no está entre los permitidos.
+        """
+        if not rol_actor or not rol_actor.strip():
+            raise AccesoDenegadoError(
+                "Acceso denegado: No se ha provisto un rol de usuario válido.",
+                rol_actor=rol_actor,
+                operacion=operacion,
+                usuario_id=usuario_id,
+            )
+
+        rol_normalizado = self.normalizar_rol(rol_actor)
+        permitidos_normalizados = {self.normalizar_rol(r) for r in roles_permitidos if r}
+
+        if not permitidos_normalizados or rol_normalizado not in permitidos_normalizados:
+            detalle_op = f" para la operación '{operacion}'" if operacion else ""
+            raise AccesoDenegadoError(
+                f"Acceso denegado{detalle_op}: El rol '{rol_actor}' no tiene permisos suficientes. "
+                f"Roles permitidos: {sorted(permitidos_normalizados)}.",
+                rol_actor=rol_actor,
+                operacion=operacion,
+                usuario_id=usuario_id,
+            )
+
+    def validar_operacion(
+        self,
+        contexto: ContextoUsuario,
+        operacion: str,
+    ) -> None:
+        """Valida una operación contra la matriz de permisos bajo política deny-by-default.
+
+        Args:
+            contexto: Contexto de identidad del usuario autenticado.
+            operacion: Nombre de la operación a ejecutar.
+
+        Raises:
+            AccesoDenegadoError: Si la operación no existe en la matriz o el rol no está autorizado.
+        """
+        if operacion not in self._MATRIZ_PERMISOS:
+            raise AccesoDenegadoError(
+                f"Acceso denegado: Operación '{operacion}' no autorizada o no configurada "
+                f"(política deny-by-default).",
+                rol_actor=contexto.rol,
+                operacion=operacion,
+                usuario_id=contexto.usuario_id,
+            )
+
+        roles_permitidos = self._MATRIZ_PERMISOS[operacion]
+        self.validar_rol(
+            rol_actor=contexto.rol,
+            roles_permitidos=roles_permitidos,
+            operacion=operacion,
+            usuario_id=contexto.usuario_id,
+        )
+
+    def validar_pertenencia_estudiante(
+        self,
+        contexto: ContextoUsuario,
+        estudiante: Union[Estudiante, str],
+        operacion: Optional[str] = None,
+    ) -> None:
+        """Valida que un estudiante solo interactúe con sus propios recursos (RN-01, ADR-005).
+
+        Si el rol del usuario autenticado es 'Estudiante', debe coincidir su identificador
+        o documento con el del estudiante involucrado en la solicitud.
+
+        Args:
+            contexto: Contexto de identidad del usuario autenticado.
+            estudiante: Instancia de Estudiante o identificador/documento del estudiante objetivo.
+            operacion: Operación invocada (opcional).
+
+        Raises:
+            AccesoDenegadoError: Si el estudiante autenticado intenta acceder a datos de otro estudiante.
+        """
+        rol_normalizado = self.normalizar_rol(contexto.rol)
+        if rol_normalizado == RolUsuario.ESTUDIANTE.value:
+            if isinstance(estudiante, Estudiante):
+                coincide = (
+                    contexto.usuario_id == estudiante.id
+                    or contexto.usuario_id == estudiante.documento
+                    or (contexto.documento is not None and contexto.documento == estudiante.documento)
+                )
+                identificador_objetivo = estudiante.documento or estudiante.id
+            else:
+                target_str = str(estudiante).strip()
+                coincide = (
+                    contexto.usuario_id == target_str
+                    or (contexto.documento is not None and contexto.documento == target_str)
+                )
+                identificador_objetivo = target_str
+
+            if not coincide:
+                detalle_op = f" para la operación '{operacion}'" if operacion else ""
+                raise AccesoDenegadoError(
+                    f"Violación de contexto de identidad{detalle_op}: El estudiante autenticado "
+                    f"'{contexto.usuario_id}' no está autorizado para acceder o gestionar la práctica "
+                    f"del estudiante '{identificador_objetivo}' (RN-01).",
+                    rol_actor=contexto.rol,
+                    operacion=operacion,
+                    usuario_id=contexto.usuario_id,
+                )
+
+    def validar_postulacion(
+        self,
+        rol_actor: str,
+        estudiante_id: Optional[str] = None,
+        usuario_id: Optional[str] = None,
+    ) -> None:
+        """Valida las autorizaciones específicas para el caso de uso de postulación (CU-01).
+
+        Asegura que:
+        1. El actor posea estrictamente el rol 'Estudiante'.
+        2. Si se proporciona usuario_id y estudiante_id, que pertenezcan al mismo titular (RN-01).
+
+        Args:
+            rol_actor: Rol autenticado del solicitante.
+            estudiante_id: Identificador o documento del estudiante para el cual se postula.
+            usuario_id: Identificador del usuario autenticado (opcional).
+
+        Raises:
+            AccesoDenegadoError: Si no cuenta con rol Estudiante o no coincide la identidad.
+        """
+        # 1. Validación de rol
+        self.validar_rol(
+            rol_actor=rol_actor,
+            roles_permitidos=[RolUsuario.ESTUDIANTE.value],
+            operacion="postular_practica",
+            usuario_id=usuario_id,
+        )
+
+        # 2. Validación de pertenencia contextual si ambos identificadores están presentes
+        if usuario_id and estudiante_id:
+            uid = usuario_id.strip()
+            eid = estudiante_id.strip()
+            if uid != eid:
+                raise AccesoDenegadoError(
+                    f"Violación de contexto de identidad: El usuario autenticado '{uid}' "
+                    f"no puede registrar una postulación a nombre de '{eid}' (RN-01).",
+                    rol_actor=rol_actor,
+                    operacion="postular_practica",
+                    usuario_id=usuario_id,
+                )
+
+    def autorizar_comando_postulacion(
+        self,
+        comando: Any,
+    ) -> None:
+        """Valida un comando de postulación (PostularEstudianteComando) de la capa de aplicación.
+
+        Verifica el rol_actor y la coincidencia entre estudiante_id / documento y el solicitante.
+        """
+        rol = getattr(comando, "rol_actor", None)
+        estudiante_id = getattr(comando, "estudiante_id", None) or getattr(comando, "documento", None)
+        usuario_id = getattr(comando, "estudiante_id", None) or getattr(comando, "documento", None)
+        self.validar_postulacion(
+            rol_actor=rol,
+            estudiante_id=estudiante_id,
+            usuario_id=usuario_id,
+        )

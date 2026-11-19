@@ -35,7 +35,7 @@
       Escenarios: 1, 2, 5, 6, 7
       Depende de: T-01, T-02, T-03
 
-- [ ] T-08 Implementar componente de autorización RBAC en aplicación
+- [X] T-08 Implementar componente de autorización RBAC en aplicación
       Archivos: aplicacion/seguridad/autorizador_rbac.py
       Escenarios: 1, 2, 3, 4, 5
       Depende de: T-02, T-04
