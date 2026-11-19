@@ -1,12 +1,13 @@
 """Excepciones y errores de la capa de dominio.
 
-Traza: CU-01, CU-02, CU-03, Escenarios 1 a 7 de spec.md, ADR-002, ADR-005, ADR-007, ADR-010.
+Traza: CU-01, CU-02, CU-03, CU-04, ADR-002, ADR-005, ADR-007, ADR-010.
 
 Define las excepciones del modelo de dominio del sistema de gestión de prácticas
 empresariales. Estas excepciones encapsulan violaciones a invariantes y reglas
 fundamentales de negocio (e.g. prácticas activas simultáneas, falta de reglas
 normativas vigentes, transiciones no permitidas en el ciclo de vida, justificación
-obligatoria de rechazo, cupos de tutores excedidos y entidades no encontradas).
+obligatoria de rechazo, cupos de tutores excedidos, registros de horas inválidos
+y entidades no encontradas).
 """
 
 from __future__ import annotations
@@ -320,3 +321,149 @@ class PracticaYaTieneTutorAsignadoError(DecisionPreviaEnFirmeError):
             f"practica_id={self.practica_id!r}, "
             f"docente_asesor_id={self.docente_asesor_id!r})"
         )
+
+
+class CantidadHorasInvalidaError(ErrorDominio):
+    """Excepción lanzada cuando la cantidad de horas reportada es inválida.
+
+    Traza: CU-04, Escenario 4 (Intento de registro con cantidad de horas no permitida o no positiva),
+    Escenario 5 (Intento de registro con exceso sobre el límite máximo de horas semanales permitido).
+    """
+
+    def __init__(
+        self,
+        cantidad_horas: int,
+        limite_maximo: int = 60,
+        mensaje: Optional[str] = None,
+    ) -> None:
+        self.cantidad_horas: int = cantidad_horas
+        self.limite_maximo: int = limite_maximo
+
+        if mensaje is None:
+            if cantidad_horas <= 0:
+                mensaje = (
+                    f"La cantidad de horas reportada debe ser un valor positivo mayor a 0 "
+                    f"(recibido: {cantidad_horas})."
+                )
+            else:
+                mensaje = (
+                    f"La cantidad de horas semanales ({cantidad_horas}) no puede superar "
+                    f"el límite reglamentario de {limite_maximo} horas."
+                )
+
+        super().__init__(mensaje)
+
+    def __repr__(self) -> str:
+        return (
+            f"CantidadHorasInvalidaError("
+            f"cantidad_horas={self.cantidad_horas!r}, "
+            f"limite_maximo={self.limite_maximo!r})"
+        )
+
+
+class DescripcionActividadesRequeridaError(ErrorDominio):
+    """Excepción lanzada cuando la descripción de actividades está vacía o en blanco.
+
+    Traza: CU-04, Escenario 6 (Intento de registro con descripción de actividades vacía o en blanco).
+    """
+
+    def __init__(
+        self,
+        mensaje: Optional[str] = None,
+    ) -> None:
+        if mensaje is None:
+            mensaje = "La descripción de actividades realizadas es obligatoria y no puede estar vacía."
+
+        super().__init__(mensaje)
+
+    def __repr__(self) -> str:
+        return "DescripcionActividadesRequeridaError()"
+
+
+class SemanaInvalidaError(ErrorDominio):
+    """Excepción lanzada cuando el número de semana es menor o igual a cero.
+
+    Traza: CU-04, Escenario 7 (Intento de registro con número de semana inválido menor o igual a cero).
+    """
+
+    def __init__(
+        self,
+        semana: int,
+        mensaje: Optional[str] = None,
+    ) -> None:
+        self.semana: int = semana
+
+        if mensaje is None:
+            mensaje = (
+                f"El número de semana debe ser un entero positivo mayor o igual a 1 "
+                f"(recibido: {semana})."
+            )
+
+        super().__init__(mensaje)
+
+    def __repr__(self) -> str:
+        return f"SemanaInvalidaError(semana={self.semana!r})"
+
+
+class SemanaHorasYaRegistradaError(ErrorDominio):
+    """Excepción lanzada cuando ya existe un reporte de horas para la misma semana en la práctica.
+
+    Traza: CU-04, Escenario 8 (Intento de registro duplicado para una misma semana ya reportada).
+    """
+
+    def __init__(
+        self,
+        practica_id: str,
+        semana: int,
+        mensaje: Optional[str] = None,
+    ) -> None:
+        self.practica_id: str = practica_id
+        self.semana: int = semana
+
+        if mensaje is None:
+            mensaje = (
+                f"La semana {semana} ya cuenta con un reporte de horas registrado para la "
+                f"práctica '{practica_id}'."
+            )
+
+        super().__init__(mensaje)
+
+    def __repr__(self) -> str:
+        return (
+            f"SemanaHorasYaRegistradaError("
+            f"practica_id={self.practica_id!r}, "
+            f"semana={self.semana!r})"
+        )
+
+
+class EstadoPracticaInvalidoParaRegistroHorasError(ErrorDominio):
+    """Excepción lanzada cuando la práctica se encuentra en un estado que no permite registrar horas.
+
+    Traza: CU-04, Escenario 3 (Intento de registro de horas en una práctica en estado no permitido).
+    ADR-010 (Máquina de estados finitos).
+    """
+
+    def __init__(
+        self,
+        practica_id: str,
+        estado_actual: str,
+        mensaje: Optional[str] = None,
+    ) -> None:
+        self.practica_id: str = practica_id
+        self.estado_actual: str = estado_actual
+
+        if mensaje is None:
+            mensaje = (
+                f"Solo se pueden registrar horas cuando la práctica se encuentra formalizada en "
+                f"estado 'Asignada' o 'EnEjecucion'. Estado actual de la práctica '{practica_id}': '{estado_actual}'."
+            )
+
+        super().__init__(mensaje)
+
+    def __repr__(self) -> str:
+        return (
+            f"EstadoPracticaInvalidoParaRegistroHorasError("
+            f"practica_id={self.practica_id!r}, "
+            f"estado_actual={self.estado_actual!r})"
+        )
+

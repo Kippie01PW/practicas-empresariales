@@ -1,6 +1,6 @@
 # Tareas: 004 Registrar horas de práctica semanales
 
-- [ ] T-01 Incorporar excepciones de dominio para registro y validación de horas
+- [X] T-01 Incorporar excepciones de dominio para registro y validación de horas
       Archivos: dominio/errores.py
       Escenarios: 3, 4, 5, 6, 7, 8
       Depende de: ninguna
