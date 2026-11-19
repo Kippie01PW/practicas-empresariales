@@ -10,7 +10,7 @@
       Escenarios: 1, 2, 7, 8, 9, 11
       Depende de: T-01
 
-- [ ] T-03 Actualizar entidad RegistroHoras con observaciones de rechazo y control de estado de validación
+- [X] T-03 Actualizar entidad RegistroHoras con observaciones de rechazo y control de estado de validación
       Archivos: dominio/modelos/registro_horas.py
       Escenarios: 1, 2, 3, 4
       Depende de: T-01

@@ -1,9 +1,11 @@
 """Entidad de dominio RegistroHoras.
 
-Traza: CU-04, EAC-03, RT-01, RN-01, RN-02, RN-03, ADR-002, ADR-010, Vista Lógica §2.
+Traza: CU-04, CU-05, EAC-03, RT-01, RN-01, RN-02, RN-03, ADR-002, ADR-010, Vista Lógica §2.
 
 Modela el reporte semanal de horas ejecutadas y actividades desarrolladas
-por el estudiante durante su práctica empresarial.
+por el estudiante durante su práctica empresarial. Incluye control de
+estado de validación (Pendiente/Aprobado/Rechazado), observaciones de
+rechazo obligatorias y protección ante reevaluaciones en firme (CU-05).
 """
 
 from __future__ import annotations
@@ -16,6 +18,8 @@ from typing import Optional
 from dominio.errores import (
     CantidadHorasInvalidaError,
     DescripcionActividadesRequeridaError,
+    MotivoRechazoHorasRequeridoError,
+    ReporteHorasYaEvaluadoError,
     SemanaInvalidaError,
 )
 
@@ -49,6 +53,7 @@ class RegistroHoras:
         "_descripcion_actividades",
         "_estado_validacion",
         "_fecha_registro",
+        "_observaciones_rechazo",
     )
 
     def __init__(
@@ -60,6 +65,7 @@ class RegistroHoras:
         descripcion_actividades: str,
         estado_validacion: EstadoValidacionHoras = EstadoValidacionHoras.PENDIENTE,
         fecha_registro: Optional[datetime] = None,
+        observaciones_rechazo: Optional[str] = None,
         id: Optional[str] = None,
     ) -> None:
         if not practica_id or not practica_id.strip():
@@ -84,6 +90,9 @@ class RegistroHoras:
         self._descripcion_actividades: str = descripcion_actividades.strip()
         self._estado_validacion: EstadoValidacionHoras = estado_validacion
         self._fecha_registro: datetime = fecha_registro or datetime.now(timezone.utc)
+        self._observaciones_rechazo: Optional[str] = (
+            observaciones_rechazo.strip() if observaciones_rechazo else None
+        )
 
     # -- Propiedades de lectura ----------------------------------------------
 
@@ -118,20 +127,69 @@ class RegistroHoras:
     # -- Métodos de mutación y transición de validación ----------------------
 
     def aprobar(self) -> None:
-        """Marca el reporte de horas como Aprobado por el supervisor."""
+        """Marca el reporte de horas como Aprobado por el supervisor.
+
+        Traza: CU-05, Escenario 1 (Aprobación exitosa de un reporte semanal de horas pendiente).
+
+        Valida que el reporte se encuentre en estado Pendiente antes de aprobar.
+        Si ya fue resuelto (Aprobado o Rechazado), lanza ReporteHorasYaEvaluadoError (Escenario 4).
+
+        Raises:
+            ReporteHorasYaEvaluadoError: Si el reporte ya cuenta con una validación en firme.
+        """
+        if self._estado_validacion != EstadoValidacionHoras.PENDIENTE:
+            raise ReporteHorasYaEvaluadoError(
+                registro_horas_id=self._id,
+                estado_actual=self._estado_validacion.value,
+                semana=self._semana,
+            )
         self._estado_validacion = EstadoValidacionHoras.APROBADO
 
-    def rechazar(self) -> None:
-        """Marca el reporte de horas como Rechazado por el supervisor."""
+    def rechazar(self, motivo: str) -> None:
+        """Marca el reporte de horas como Rechazado por el supervisor con observaciones.
+
+        Traza: CU-05, Escenario 2 (Rechazo con observaciones descriptivas),
+        Escenario 3 (Rechazo fallido por ausencia de justificación).
+
+        Valida que:
+        1. El reporte se encuentre en estado Pendiente (si ya fue resuelto, lanza
+           ReporteHorasYaEvaluadoError, Escenario 4).
+        2. El motivo sea una cadena no vacía (si está vacía, lanza
+           MotivoRechazoHorasRequeridoError, Escenario 3).
+
+        Args:
+            motivo: Observaciones descriptivas del rechazo (obligatorio, RN-02).
+
+        Raises:
+            ReporteHorasYaEvaluadoError: Si el reporte ya cuenta con una validación en firme.
+            MotivoRechazoHorasRequeridoError: Si el motivo es vacío o en blanco.
+        """
+        if self._estado_validacion != EstadoValidacionHoras.PENDIENTE:
+            raise ReporteHorasYaEvaluadoError(
+                registro_horas_id=self._id,
+                estado_actual=self._estado_validacion.value,
+                semana=self._semana,
+            )
+        if not motivo or not motivo.strip():
+            raise MotivoRechazoHorasRequeridoError(registro_horas_id=self._id)
+
+        self._observaciones_rechazo = motivo.strip()
         self._estado_validacion = EstadoValidacionHoras.RECHAZADO
 
+    @property
+    def observaciones_rechazo(self) -> Optional[str]:
+        """Observaciones descriptivas del rechazo (None si el reporte fue aprobado o está pendiente)."""
+        return self._observaciones_rechazo
+
     def __repr__(self) -> str:
+        obs = f", observaciones={self._observaciones_rechazo!r}" if self._observaciones_rechazo else ""
         return (
             f"RegistroHoras(id={self._id!r}, "
             f"practica_id={self._practica_id!r}, "
             f"semana={self._semana!r}, "
             f"cantidad_horas={self._cantidad_horas!r}, "
-            f"estado_validacion={self._estado_validacion.value!r})"
+            f"estado_validacion={self._estado_validacion.value!r}"
+            f"{obs})"
         )
 
     def __eq__(self, other: object) -> bool:
