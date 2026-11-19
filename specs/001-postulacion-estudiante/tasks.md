@@ -5,7 +5,7 @@
       Escenarios: 1, 2, 3, 5, 6, 7
       Depende de: ninguna
 
-- [ ] T-02 Crear modelos de dominio para Estudiante y ReglaPrograma
+- [X] T-02 Crear modelos de dominio para Estudiante y ReglaPrograma
       Archivos: dominio/modelos/estudiante.py, dominio/modelos/regla_programa.py
       Escenarios: 1, 2, 3, 4, 5
       Depende de: ninguna
