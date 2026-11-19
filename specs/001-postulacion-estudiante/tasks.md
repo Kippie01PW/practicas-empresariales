@@ -45,7 +45,7 @@
       Escenarios: 1, 2, 3, 4, 5
       Depende de: T-01, T-02, T-03, T-04, T-05, T-06, T-07, T-08
 
-- [ ] T-10 Implementar caso de uso de integración y reintento asíncrono ReintentarValidacionSiaCasoUso
+- [X] T-10 Implementar caso de uso de integración y reintento asíncrono ReintentarValidacionSiaCasoUso
       Archivos: aplicacion/casos_uso/reintentar_validacion_sia.py
       Escenarios: 6, 7
       Depende de: T-01, T-02, T-03, T-04, T-06, T-07
