@@ -28,4 +28,6 @@
 - Incluir tareas de seguridad y de manejo de errores cuando apliquen.
 - La última tarea es la validación, que produce validacion.md.
 - No escribir código.
-- Al terminar, detenerse y esperar revisión.
+- Al terminar:
+  1. Proponer el mensaje de commit: `specs: Preparar spec, plan y tasks para CU-xx`.
+  2. Detenerse y esperar revisión.
