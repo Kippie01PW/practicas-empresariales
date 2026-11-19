@@ -20,7 +20,7 @@
       Escenarios: 1, 2, 6, 7
       Depende de: ninguna
 
-- [ ] T-05 Implementar caso de uso principal EvaluarPostulacionCasoUso
+- [X] T-05 Implementar caso de uso principal EvaluarPostulacionCasoUso
       Archivos: aplicacion/casos_uso/evaluar_postulacion.py
       Escenarios: 1, 2, 3, 4, 5, 6, 7
       Depende de: T-01, T-02, T-03, T-04
