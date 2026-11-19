@@ -5,7 +5,7 @@
       Escenarios: 3, 4, 5, 6, 7, 8
       Depende de: ninguna
 
-- [ ] T-02 Crear modelo de dominio RegistroHoras con validaciones de invariantes y estados de validación
+- [X] T-02 Crear modelo de dominio RegistroHoras con validaciones de invariantes y estados de validación
       Archivos: dominio/modelos/registro_horas.py
       Escenarios: 1, 4, 5, 6, 7
       Depende de: T-01
