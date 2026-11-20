@@ -1,6 +1,6 @@
 # Tareas: 013 Monitorear estado general de prácticas
 
-- [ ] T-01 Crear DTOs inmutables para comandos de consulta, indicadores de carga docente y respuestas del tablero de monitoreo general
+- [X] T-01 Crear DTOs inmutables para comandos de consulta, indicadores de carga docente y respuestas del tablero de monitoreo general
       Archivos: aplicacion/dtos/monitoreo_practicas_dto.py
       Escenarios: 1, 2, 3, 4, 6, 9, 10
       Depende de: ninguna
