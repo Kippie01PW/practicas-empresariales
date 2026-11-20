@@ -1,6 +1,6 @@
 """Entidad raíz Practica y enumeración EstadoPractica.
 
-Traza: CU-01, CU-02, CU-03, CU-04, CU-05, ADR-010 (Máquina de Estados Finitos), ADR-007 (Reglas versionadas).
+Traza: CU-01, CU-02, CU-03, CU-04, CU-05, CU-07, ADR-010 (Máquina de Estados Finitos), ADR-007 (Reglas versionadas).
 
 La entidad ``Practica`` encapsula el ciclo de vida completo de una práctica
 empresarial mediante una máquina de estados finitos interna.  Solo se exponen
@@ -17,9 +17,11 @@ from typing import Optional
 
 from dominio.errores import (
     DecisionPreviaEnFirmeError,
+    EstadoPracticaInvalidoParaEvaluacionError,
     EstadoPracticaInvalidoParaRegistroHorasError,
     EstadoPracticaInvalidoParaValidarHorasError,
     MotivoRechazoRequeridoError,
+    PracticaYaEvaluadaError,
     PracticaYaTieneTutorAsignadoError,
     TransicionEstadoInvalidaError,
 )
@@ -324,7 +326,49 @@ class Practica:
         self._fecha_inicio = fecha_inicio or datetime.now()
         self._transicionar(EstadoPractica.EN_EJECUCION)
 
+    def registrar_evaluacion_desempeno(self, fecha_fin: Optional[datetime] = None) -> None:
+        """Transición de ``EnEjecucion`` a ``Evaluada`` al asentar la evaluación de desempeño.
+
+        Traza: CU-07, Escenarios 2, 3, 4, 11 y 12, plan.md. ADR-010 (Máquina de estados finitos), RN-02.
+
+        Válida únicamente cuando la práctica se encuentra en estado ``EnEjecucion``.
+        Si ya se encuentra en estado ``Evaluada``, lanza ``PracticaYaEvaluadaError``.
+        Si se encuentra en cualquier otro estado distinto a ``EnEjecucion``, lanza
+        ``EstadoPracticaInvalidoParaEvaluacionError``.
+
+        Args:
+            fecha_fin: Fecha y hora de evaluación / cierre de ejecución (default: ahora).
+
+        Raises:
+            PracticaYaEvaluadaError: Si la práctica ya se encuentra en estado Evaluada.
+            EstadoPracticaInvalidoParaEvaluacionError: Si la práctica no está en EnEjecucion.
+        """
+        if self._estado_actual == EstadoPractica.EVALUADA:
+            raise PracticaYaEvaluadaError(practica_id=self._id)
+
+        if self._estado_actual != EstadoPractica.EN_EJECUCION:
+            raise EstadoPracticaInvalidoParaEvaluacionError(
+                practica_id=self._id,
+                estado_actual=self._estado_actual.value,
+            )
+
+        self._transicionar(EstadoPractica.EVALUADA)
+        self._fecha_fin = fecha_fin or datetime.now()
+
     # -- Consultas de dominio -----------------------------------------------
+
+    def puede_evaluar_desempeno(self) -> bool:
+        """Indica si la práctica se encuentra habilitada para registrar la evaluación de desempeño.
+
+        Traza: CU-07, Escenarios 2, 3, 4, 11 y 12, plan.md. ADR-010 (Máquina de estados finitos).
+
+        Solo las prácticas que se encuentren formalmente en estado ``EnEjecucion``
+        pueden recibir la evaluación de desempeño del supervisor de empresa.
+
+        Returns:
+            True si la práctica está en estado EnEjecucion; False en cualquier otro caso.
+        """
+        return self._estado_actual == EstadoPractica.EN_EJECUCION
 
     def puede_registrar_horas(self) -> bool:
         """Indica si la práctica se encuentra habilitada para registrar horas semanales.

@@ -10,7 +10,7 @@
       Escenarios: 2, 3, 4, 5, 6, 7, 16
       Depende de: T-01
 
-- [ ] T-03 Actualizar entidad Practica con transición de estado EnEjecucion a Evaluada al registrar evaluación de desempeño
+- [X] T-03 Actualizar entidad Practica con transición de estado EnEjecucion a Evaluada al registrar evaluación de desempeño
       Archivos: dominio/modelos/practica.py
       Escenarios: 2, 3, 4, 11, 12
       Depende de: T-01
