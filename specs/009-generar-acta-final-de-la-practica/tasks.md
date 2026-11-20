@@ -40,7 +40,7 @@
       Escenarios: 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12
       Depende de: T-01, T-02, T-03, T-04, T-05, T-06, T-07
 
-- [ ] T-09 Implementar adaptador AdaptadorPdfYHashSimulado para renderizado de plantilla HTML/CSS a PDF, cálculo de hash SHA-256 y almacenamiento en repositorio de actas
+- [X] T-09 Implementar adaptador AdaptadorPdfYHashSimulado para renderizado de plantilla HTML/CSS a PDF, cálculo de hash SHA-256 y almacenamiento en repositorio de actas
       Archivos: infraestructura/adaptadores/adaptador_pdf_hash_simulado.py
       Escenarios: 1, 6, 10, 11
       Depende de: T-04, T-06
