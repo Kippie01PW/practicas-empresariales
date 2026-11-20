@@ -20,7 +20,7 @@
       Escenarios: 1, 6, 11
       Depende de: ninguna
 
-- [ ] T-05 Definir puerto RepositorioActaFinalPort para persistencia, consulta de unicidad por práctica y consecutivo anual de número de acta
+- [X] T-05 Definir puerto RepositorioActaFinalPort para persistencia, consulta de unicidad por práctica y consecutivo anual de número de acta
       Archivos: aplicacion/puertos/repositorio_acta_final.py
       Escenarios: 1, 5, 6, 10
       Depende de: T-02

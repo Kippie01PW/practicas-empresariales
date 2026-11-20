@@ -1,13 +1,15 @@
 """Puerto de persistencia para la entidad ActaFinal.
 
-Traza: CU-09, CU-10, EAC-03, OB-05, PA-03, RN-01, RN-02, RN-03,
+Traza: CU-09, CU-10, EAC-01, EAC-03, OB-01, OB-05, PA-03, RN-01, RN-02, RN-03, DT-02,
 ADR-002 (Clean Architecture y Puertos y Adaptadores), ADR-003 (Persistencia transaccional),
-ADR-008 (Generación y preservación de actas en PDF con sellado SHA-256),
+ADR-008 (Generación y preservación del acta final con sellado SHA-256),
 ADR-010 (Máquina de estados finitos), Vista Lógica §2 (01-logica.puml).
 
 Define el contrato formal (Protocol) que la capa de aplicación exige a los
-adaptadores de persistencia para almacenar, actualizar y consultar el acta final
-asociada a una práctica empresarial (relación 1 a 0..1 entre Practica y ActaFinal).
+adaptadores de persistencia para almacenar, actualizar, consultar la unicidad
+por práctica (relación 1 a 0..1 entre Practica y ActaFinal), generar el consecutivo
+anual de número de acta ("ACTA-<AÑO>-<NNNN>") y ejecutar compensaciones transaccionales
+ante fallos de almacenamiento (DT-02, Escenario 10).
 """
 
 from __future__ import annotations
@@ -21,24 +23,26 @@ from dominio.modelos.acta_final import ActaFinal
 class RepositorioActaFinalPort(Protocol):
     """Puerto de persistencia para la entidad ActaFinal.
 
-    Define las operaciones requeridas por los casos de uso de gestión y aprobación
-    electrónica de actas (CU-10) para almacenar, actualizar y consultar instancias
-    de ActaFinal por su identificador único o por el identificador de la práctica.
+    Define las operaciones requeridas por GenerarActaFinalCasoUso (CU-09) y
+    AprobarActaElectronicamenteCasoUso (CU-10) para verificar la unicidad
+    del acta por práctica (Escenario 5), asignar el número consecutivo anual
+    (Escenarios 1 y 6), persistir y actualizar el registro sellado con hash SHA-256
+    y revertir registros parciales mediante compensación atómica (Escenario 10, DT-02).
     """
 
     def guardar(self, acta: ActaFinal) -> None:
-        """Persiste una nueva acta final en el almacén de datos.
+        """Persiste una nueva instancia de ActaFinal en el almacén de datos.
 
         Args:
-            acta: Instancia de ActaFinal a persistir.
+            acta: Instancia de la entidad ActaFinal a persistir.
         """
         ...
 
     def actualizar(self, acta: ActaFinal) -> None:
-        """Actualiza el estado de firmas electrónicas y datos de un acta final existente.
+        """Actualiza el estado de firmas electrónicas y datos de un ActaFinal existente.
 
         Args:
-            acta: Instancia de ActaFinal con sus atributos actualizados.
+            acta: Instancia de ActaFinal con sus atributos y firmas actualizadas (CU-10).
         """
         ...
 
@@ -46,7 +50,7 @@ class RepositorioActaFinalPort(Protocol):
         """Busca y retorna un acta final por su identificador único.
 
         Args:
-            acta_id: Identificador único del acta final.
+            acta_id: Identificador único o UUID del ActaFinal.
 
         Returns:
             La entidad ActaFinal correspondiente si existe, o None si no se encuentra.
@@ -54,16 +58,61 @@ class RepositorioActaFinalPort(Protocol):
         ...
 
     def buscar_por_practica(self, practica_id: str) -> Optional[ActaFinal]:
-        """Busca el acta final asociada a una práctica empresarial específica.
+        """Busca si ya existe un acta final asociada a la práctica empresarial indicada.
 
-        Garantiza la consulta sobre la relación 1 a 0..1 entre Practica y ActaFinal
-        (Escenarios 1 a 6 de CU-10).
+        Garantiza la verificación de la invariante de multiplicidad 1 a 0..1 entre
+        Practica y ActaFinal (CU-09 Escenario 5 y CU-10 Escenarios 1 a 6).
 
         Args:
             practica_id: Identificador único de la práctica empresarial.
 
         Returns:
             La entidad ActaFinal asociada a la práctica si existe,
-            o None si la práctica aún no cuenta con un acta final generada.
+            o None si la práctica aún no tiene un ActaFinal emitida.
+        """
+        ...
+
+    def buscar_por_numero_acta(self, numero_acta: str) -> Optional[ActaFinal]:
+        """Busca y retorna un acta final por su número oficial consecutivo anual.
+
+        Args:
+            numero_acta: Número oficial del acta (ej. "ACTA-2026-0001").
+
+        Returns:
+            La entidad ActaFinal correspondiente si existe, o None si no se encuentra.
+        """
+        ...
+
+    def siguiente_numero_acta(self, anio: int) -> str:
+        """Genera el siguiente número oficial consecutivo anual para un acta final.
+
+        Cumple el formato institucional "ACTA-<AÑO>-<NNNN>" (ej. "ACTA-2026-0001")
+        definido en CU-09 (Escenarios 1 y 6).
+
+        Args:
+            anio: Año calendario de emisión del acta (ej. 2026).
+
+        Returns:
+            Cadena con el número de acta consecutivo formateado ("ACTA-<AÑO>-<NNNN>").
+        """
+        ...
+
+    def eliminar_por_id(self, acta_id: str) -> None:
+        """Elimina un registro de ActaFinal por su identificador para compensación transaccional.
+
+        Permite revertir la operación cuando ocurre un fallo posterior en la transacción
+        evitando inconsistencias entre el repositorio de actas PDF y la base de datos
+        (DT-02, CU-09 Escenario 10).
+
+        Args:
+            acta_id: Identificador único del ActaFinal a revertir.
+        """
+        ...
+
+    def listar_todas(self) -> list[ActaFinal]:
+        """Retorna todas las actas finales registradas en el almacén de datos.
+
+        Returns:
+            Lista de instancias de ActaFinal almacenadas.
         """
         ...
