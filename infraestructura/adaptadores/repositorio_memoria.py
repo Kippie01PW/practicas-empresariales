@@ -286,6 +286,21 @@ class InMemoryRepositorioTokenEvaluacion(RepositorioTokenEvaluacionPort):
         """Recupera un TokenEvaluacion a partir de su identificador único."""
         return self._tokens_por_id.get(token_id.strip())
 
+    def listar_por_practica(self, practica_id: str) -> list[TokenEvaluacion]:
+        """Recupera todos los TokenEvaluacion emitidos para una práctica ordenados por fecha_emision.
+
+        Traza: CU-08, Escenarios 1, 2, 3, 6, 8 y 11, ADR-004.
+        """
+        if not practica_id:
+            return []
+        practica_id_limpio = practica_id.strip()
+        tokens = [
+            t
+            for t in self._tokens_por_id.values()
+            if t.practica_id == practica_id_limpio
+        ]
+        return sorted(tokens, key=lambda t: t.fecha_emision)
+
     def listar_todos(self) -> list[TokenEvaluacion]:
         """Retorna todos los tokens almacenados."""
         return list(self._tokens_por_id.values())

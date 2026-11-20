@@ -30,7 +30,7 @@
       Escenarios: 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11
       Depende de: T-01, T-02, T-03, T-04, T-05
 
-- [ ] T-07 Implementar consulta listar_por_practica en adaptador InMemoryRepositorioTokenEvaluacion
+- [X] T-07 Implementar consulta listar_por_practica en adaptador InMemoryRepositorioTokenEvaluacion
       Archivos: infraestructura/adaptadores/repositorio_memoria.py
       Escenarios: 1, 2, 3, 6, 8, 11
       Depende de: T-02, T-04
