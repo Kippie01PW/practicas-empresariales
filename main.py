@@ -29,6 +29,9 @@ from dataclasses import dataclass
 
 from datetime import datetime, timedelta, timezone
 
+from aplicacion.casos_uso.aprobar_acta_electronicamente import (
+    AprobarActaElectronicamenteCasoUso,
+)
 from aplicacion.casos_uso.asignar_docente_asesor import AsignarDocenteAsesorCasoUso
 from aplicacion.casos_uso.enviar_recordatorios_plazos import (
     EnviarRecordatoriosPlazosCasoUso,
@@ -46,6 +49,10 @@ from aplicacion.dtos.acta_final_dto import (
     DatosRenderizadoActaDTO,
     GenerarActaFinalComando,
     ResultadoRenderizadoPdfDTO,
+)
+from aplicacion.dtos.aprobacion_acta_dto import (
+    AprobacionActaRespuestaDTO,
+    AprobarActaComando,
 )
 from aplicacion.dtos.asignacion_docente_dto import (
     AsignacionDocenteRespuestaDTO,
@@ -88,6 +95,7 @@ from aplicacion.puertos.servicio_generador_acta_pdf import (
 )
 from aplicacion.seguridad.autorizador_rbac import AutorizadorRBAC, RolUsuario
 from dominio.errores import ErrorAlmacenamientoActaPdfError
+from dominio.modelos.acta_final import ActaFinal
 from dominio.modelos.docente_asesor import DocenteAsesor
 from dominio.modelos.regla_programa import EstadoVigenciaRegla, ReglaPrograma
 from infraestructura.adaptadores.adaptador_pdf_hash_simulado import (
@@ -301,6 +309,7 @@ class SistemaPracticasEmpresariales:
     caso_uso_evaluar_desempeno: EvaluarDesempenoCasoUso
     caso_uso_enviar_recordatorios: EnviarRecordatoriosPlazosCasoUso
     caso_uso_generar_acta: GenerarActaFinalCasoUso
+    caso_uso_aprobar_acta: AprobarActaElectronicamenteCasoUso
 
     # Componentes de seguridad y autorización
     autorizador_rbac: AutorizadorRBAC
@@ -315,7 +324,9 @@ class SistemaPracticasEmpresariales:
     repositorio_token: InMemoryRepositorioTokenEvaluacion
     repositorio_evaluacion: InMemoryRepositorioEvaluacionDesempeno
     repositorio_acta: InMemoryRepositorioActaFinal
+    repositorio_acta_final: InMemoryRepositorioActaFinal
     servicio_pdf: AdaptadorPdfYHashSimulado
+    servicio_pdf_hash: AdaptadorPdfYHashSimulado
     servicio_sia: AdaptadorSiaSimulado
     broker_mensajes: InMemoryBrokerMensajes
     servicio_correo: AdaptadorCorreoSimulado
@@ -498,6 +509,16 @@ def inicializar_sistema(
         repositorio_docente=repo_docente,
     )
 
+    caso_uso_aprobar_acta = AprobarActaElectronicamenteCasoUso(
+        repositorio_practica=repo_practica,
+        repositorio_acta_final=repo_acta,
+        repositorio_docente=repo_docente,
+        servicio_pdf_hash=servicio_pdf,
+        autorizador_rbac=autorizador_rbac,
+        publicador_eventos=broker_mensajes,
+        servicio_correo=servicio_correo,
+    )
+
     return SistemaPracticasEmpresariales(
         caso_uso_postular=caso_uso_postular,
         caso_uso_reintentar_sia=caso_uso_reintentar_sia,
@@ -509,6 +530,7 @@ def inicializar_sistema(
         caso_uso_evaluar_desempeno=caso_uso_evaluar_desempeno,
         caso_uso_enviar_recordatorios=caso_uso_enviar_recordatorios,
         caso_uso_generar_acta=caso_uso_generar_acta,
+        caso_uso_aprobar_acta=caso_uso_aprobar_acta,
         autorizador_rbac=autorizador_rbac,
         proveedor_identidad=proveedor_identidad,
         interceptor_identidad=interceptor_identidad,
@@ -519,7 +541,9 @@ def inicializar_sistema(
         repositorio_token=repo_token,
         repositorio_evaluacion=repo_evaluacion,
         repositorio_acta=repo_acta,
+        repositorio_acta_final=repo_acta,
         servicio_pdf=servicio_pdf,
+        servicio_pdf_hash=servicio_pdf,
         servicio_sia=servicio_sia,
         broker_mensajes=broker_mensajes,
         servicio_correo=servicio_correo,
@@ -556,7 +580,8 @@ def main() -> int:
     print("                                RevisarAvancesHorasCasoUso (CU-06),")
     print("                                EvaluarDesempenoCasoUso (CU-07),")
     print("                                EnviarRecordatoriosPlazosCasoUso (CU-08),")
-    print("                                GenerarActaFinalCasoUso (CU-09)")
+    print("                                GenerarActaFinalCasoUso (CU-09),")
+    print("                                AprobarActaElectronicamenteCasoUso (CU-10)")
 
     # Demostración del Escenario 1: Postulación exitosa
     print("\n--- Demostración CU-01: Postulación exitosa (Escenario 1) ---")
@@ -826,6 +851,52 @@ def main() -> int:
     )
     print(f"Estado Práctica:      {respuesta_acta.estado_practica}")
     print(f"Mensaje:              {respuesta_acta.mensaje}")
+
+    eventos = sistema.repositorio_practica.buscar_eventos_por_entidad(f"Practica:{respuesta.practica_id}")
+    print(f"Total eventos en bitácora:     {len(eventos)}")
+
+    # Demostración CU-10: Aprobación electrónica secuencial del Acta Final (DocenteAsesor -> Coordinador)
+    print("\n--- Demostración CU-10: Aprobación Electrónica del Acta Final (Escenarios 1 y 2) ---")
+    comando_aprobar_docente = AprobarActaComando(
+        practica_id=respuesta.practica_id or "",
+        actor_id="doc_001",
+        rol_actor=RolUsuario.DOCENTE_ASESOR.value,
+        acta_id=respuesta_acta.acta_id,
+        ip_origen="192.168.1.60",
+    )
+    respuesta_firma_docente: AprobacionActaRespuestaDTO = sistema.caso_uso_aprobar_acta(
+        comando_aprobar_docente
+    )
+    print(
+        f"Paso 1 (Docente):     aprobadaPorDocente={respuesta_firma_docente.aprobada_por_docente}, "
+        f"aprobadaPorCoordinador={respuesta_firma_docente.aprobada_por_coordinador}, "
+        f"estado={respuesta_firma_docente.estado_practica}"
+    )
+    print(f"Mensaje Paso 1:       {respuesta_firma_docente.mensaje}")
+
+    comando_aprobar_coordinador = AprobarActaComando(
+        practica_id=respuesta.practica_id or "",
+        actor_id="coord_001",
+        rol_actor=RolUsuario.COORDINADOR_PRACTICAS.value,
+        acta_id=respuesta_acta.acta_id,
+        ip_origen="192.168.1.50",
+    )
+    respuesta_firma_coord: AprobacionActaRespuestaDTO = sistema.caso_uso_aprobar_acta(
+        comando_aprobar_coordinador
+    )
+    print(
+        f"Paso 2 (Coordinador): aprobadaPorDocente={respuesta_firma_coord.aprobada_por_docente}, "
+        f"aprobadaPorCoordinador={respuesta_firma_coord.aprobada_por_coordinador}, "
+        f"actaEnFirme={respuesta_firma_coord.acta_en_firme}"
+    )
+    print(f"Nuevo estado práctica:{respuesta_firma_coord.estado_practica}")
+    print(
+        f"Cupo docente liberado:{respuesta_firma_coord.cupo_docente_liberado} "
+        f"(practicasActivas={respuesta_firma_coord.practicas_activas_docente})"
+    )
+    eventos_acta = sistema.broker_mensajes.obtener_eventos_acta_emitida()
+    print(f"Eventos ActaFinalEmitida publicados: {len(eventos_acta)}")
+    print(f"Mensaje Paso 2:       {respuesta_firma_coord.mensaje}")
 
     eventos = sistema.repositorio_practica.buscar_eventos_por_entidad(f"Practica:{respuesta.practica_id}")
     print(f"Total eventos en bitácora:     {len(eventos)}")

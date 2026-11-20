@@ -60,7 +60,7 @@
       Escenarios: 2
       Depende de: T-07
 
-- [ ] T-13 Integrar InMemoryRepositorioActaFinal, AdaptadorPdfHashSimulado y AprobarActaElectronicamenteCasoUso en el punto de composición main.py
+- [X] T-13 Integrar InMemoryRepositorioActaFinal, AdaptadorPdfHashSimulado y AprobarActaElectronicamenteCasoUso en el punto de composición main.py
       Archivos: main.py
       Escenarios: 1, 2, 3, 4, 5, 6, 7, 8, 9
       Depende de: T-09, T-10, T-11, T-12
