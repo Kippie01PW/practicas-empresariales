@@ -10,7 +10,7 @@
       Escenarios: 1, 2, 3, 4, 5, 6, 8, 10
       Depende de: T-01
 
-- [ ] T-03 Crear DTOs inmutables para comandos de creación, edición, simulación, activación y eliminación de ReglaPrograma y sus respuestas en CU-12
+- [X] T-03 Crear DTOs inmutables para comandos de creación, edición, simulación, activación y eliminación de ReglaPrograma y sus respuestas en CU-12
       Archivos: aplicacion/dtos/regla_programa_dto.py
       Escenarios: 1, 2, 3, 4
       Depende de: ninguna
