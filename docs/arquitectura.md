@@ -17,7 +17,7 @@ Funcionalidades: [Catálogo de casos de uso](drivers.md#1-lista-de-casos-de-uso)
 - **Seguimiento y Horas:** [CU-04](../specs/004-registrar-horas-practica/spec.md), [CU-05](../specs/005-validar-horas-registradas/spec.md), [CU-06](../specs/006-revisar-avances-de-horas/spec.md), [CU-08](../specs/008-enviar-recordatorios-plazos/spec.md).
 - **Evaluación de Desempeño:** [CU-07](../specs/007-evaluar-desempeno-del-practicante/spec.md).
 - **Cierre y Actas:** CU-09, [CU-10](../specs/010-aprobar-acta-electronicamente/spec.md).
-- **Configuración, Auditoría y Migración:** CU-12, CU-13, CU-14, CU-15.
+- **Configuración, Auditoría y Migración:** CU-12, [CU-13](../specs/013-monitorear-estado-general-de-practicas/spec.md), CU-14, CU-15.
 
 ---
 
