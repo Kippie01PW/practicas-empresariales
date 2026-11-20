@@ -14,6 +14,7 @@ from __future__ import annotations
 
 from typing import Optional
 
+from aplicacion.puertos.repositorio_acta_final import RepositorioActaFinalPort
 from aplicacion.puertos.repositorio_docente import RepositorioDocentePort
 from aplicacion.puertos.repositorio_evaluacion_desempeno import (
     RepositorioEvaluacionDesempenoPort,
@@ -22,6 +23,7 @@ from aplicacion.puertos.repositorio_practica import RepositorioPracticaPort
 from aplicacion.puertos.repositorio_registro_horas import RepositorioRegistroHorasPort
 from aplicacion.puertos.repositorio_regla import RepositorioReglaProgramaPort
 from aplicacion.puertos.repositorio_token_evaluacion import RepositorioTokenEvaluacionPort
+from dominio.modelos.acta_final import ActaFinal
 from dominio.modelos.docente_asesor import DocenteAsesor
 from dominio.modelos.evaluacion_desempeno import EvaluacionDesempeno
 from dominio.modelos.evento_bitacora import EventoBitacora
@@ -355,6 +357,56 @@ class InMemoryRepositorioEvaluacionDesempeno(RepositorioEvaluacionDesempenoPort)
         """Limpia las evaluaciones almacenadas (útil para pruebas)."""
         self._evaluaciones_por_id.clear()
         self._evaluaciones_por_practica.clear()
+
+
+class InMemoryRepositorioActaFinal(RepositorioActaFinalPort):
+    """Implementación en memoria del puerto RepositorioActaFinalPort.
+
+    Traza: CU-09, CU-10, EAC-03, OB-05, PA-03, RN-01, RN-02, RN-03,
+    ADR-002, ADR-003, ADR-008, ADR-010, Vista Lógica §2 (01-logica.puml).
+
+    Almacena en memoria las instancias de ActaFinal indexadas por id y por
+    practica_id, garantizando la relación 1 a 0..1 entre Practica y ActaFinal.
+    """
+
+    def __init__(self, actas_iniciales: Optional[list[ActaFinal]] = None) -> None:
+        self._actas_por_id: dict[str, ActaFinal] = {}
+        self._actas_por_practica: dict[str, ActaFinal] = {}
+        if actas_iniciales:
+            for acta in actas_iniciales:
+                self.guardar(acta)
+
+    def guardar(self, acta: ActaFinal) -> None:
+        """Persiste una nueva instancia de ActaFinal en memoria."""
+        self._actas_por_id[acta.id] = acta
+        self._actas_por_practica[acta.practica_id] = acta
+
+    def actualizar(self, acta: ActaFinal) -> None:
+        """Actualiza el estado de firmas electrónicas y datos de un ActaFinal existente."""
+        self._actas_por_id[acta.id] = acta
+        self._actas_por_practica[acta.practica_id] = acta
+
+    def buscar_por_id(self, acta_id: str) -> Optional[ActaFinal]:
+        """Busca y retorna un ActaFinal por su identificador único."""
+        if not acta_id:
+            return None
+        return self._actas_por_id.get(acta_id.strip())
+
+    def buscar_por_practica(self, practica_id: str) -> Optional[ActaFinal]:
+        """Busca y retorna el ActaFinal asociada a una práctica empresarial."""
+        if not practica_id:
+            return None
+        return self._actas_por_practica.get(practica_id.strip())
+
+    def listar_todas(self) -> list[ActaFinal]:
+        """Retorna todas las instancias de ActaFinal almacenadas."""
+        return list(self._actas_por_id.values())
+
+    def limpiar(self) -> None:
+        """Limpia las actas almacenadas (útil para pruebas)."""
+        self._actas_por_id.clear()
+        self._actas_por_practica.clear()
+
 
 
 
