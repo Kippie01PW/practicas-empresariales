@@ -5,7 +5,7 @@
       Escenarios: 1, 2, 3, 4, 5, 6, 7, 12
       Depende de: ninguna
 
-- [ ] T-02 Extender puerto RepositorioPracticaPort con consulta de práctica activa o más reciente por estudiante
+- [X] T-02 Extender puerto RepositorioPracticaPort con consulta de práctica activa o más reciente por estudiante
       Archivos: aplicacion/puertos/repositorio_practica.py
       Escenarios: 7, 8, 13
       Depende de: ninguna

@@ -70,6 +70,27 @@ class RepositorioPracticaPort(Protocol):
         """
         ...
 
+    def buscar_mas_reciente_o_activa_por_estudiante(
+        self, estudiante_id: str
+    ) -> Optional[Practica]:
+        """Busca la práctica activa en curso o la más reciente de un estudiante (CU-11).
+
+        Si el estudiante cuenta con una práctica activa en curso (`es_activa() == True`),
+        se retorna priorizándola sobre postulaciones previas rechazadas o históricas.
+        Si no tiene una práctica activa en curso, retorna la más reciente según
+        `fecha_postulacion` (preservando el orden de inserción como desempate
+        determinista), o `None` si el estudiante no tiene ninguna práctica registrada
+        (Escenarios 7, 8 y 13).
+
+        Args:
+            estudiante_id: Identificador único del estudiante titular.
+
+        Returns:
+            La entidad Practica activa o más reciente del estudiante, o None si no
+            cuenta con ninguna postulación o práctica registrada.
+        """
+        ...
+
     def listar_por_docente(self, docente_asesor_id: str) -> list[Practica]:
         """Retorna las prácticas asignadas al docente asesor indicado (CU-06, RN-01).
 
