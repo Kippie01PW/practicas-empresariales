@@ -25,7 +25,7 @@
       Escenarios: 6, 9, 11
       Depende de: ninguna
 
-- [ ] T-06 Implementar caso de uso EnviarRecordatoriosPlazosCasoUso con evaluación en días calendario, renovación de tokens, escalamiento tras 3 recordatorios, cooldown de 1 hora y tolerancia a fallos de correo
+- [X] T-06 Implementar caso de uso EnviarRecordatoriosPlazosCasoUso con evaluación en días calendario, renovación de tokens, escalamiento tras 3 recordatorios, cooldown de 1 hora y tolerancia a fallos de correo
       Archivos: aplicacion/casos_uso/enviar_recordatorios_plazos.py
       Escenarios: 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11
       Depende de: T-01, T-02, T-03, T-04, T-05
