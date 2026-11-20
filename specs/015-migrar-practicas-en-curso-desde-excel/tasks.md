@@ -10,7 +10,7 @@
       Escenarios: 1, 2, 3, 4, 5, 6, 7
       Depende de: ninguna
 
-- [ ] T-03 Definir puerto LectorPlantillaExcelPort para lectura de filas desde la plantilla normalizada de Excel
+- [X] T-03 Definir puerto LectorPlantillaExcelPort para lectura de filas desde la plantilla normalizada de Excel
       Archivos: aplicacion/puertos/lector_plantilla_excel.py
       Escenarios: 1, 2, 3, 4, 5, 6, 7
       Depende de: T-02
