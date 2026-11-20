@@ -10,7 +10,7 @@
       Escenarios: 1, 2, 3, 4
       Depende de: ninguna
 
-- [ ] T-03 Ampliar puerto RepositorioPracticaPort con el método listar_todas para consultas históricas consolidadas
+- [X] T-03 Ampliar puerto RepositorioPracticaPort con el método listar_todas para consultas históricas consolidadas
       Archivos: aplicacion/puertos/repositorio_practica.py
       Escenarios: 1, 2, 3, 4
       Depende de: ninguna

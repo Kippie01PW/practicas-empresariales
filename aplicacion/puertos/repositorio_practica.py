@@ -105,11 +105,10 @@ class RepositorioPracticaPort(Protocol):
         ...
 
     def listar_todas(self) -> list[Practica]:
-        """Retorna todas las prácticas registradas en el almacén de datos (CU-13, RT-01).
+        """Retorna todas las prácticas registradas en el almacén de datos (CU-13, CU-14, RT-01).
 
         Utilizado en modo estrictamente de solo lectura por el monitoreo general
-        de prácticas para consolidar indicadores por estado del ciclo de vida y
-        restringir el listado al programa académico del coordinador autenticado.
+        de prácticas y la generación de consolidados históricos para auditoría.
 
         Returns:
             Lista con todas las instancias Practica almacenadas en orden determinista.
