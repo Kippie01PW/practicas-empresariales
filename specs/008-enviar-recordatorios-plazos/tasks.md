@@ -40,7 +40,7 @@
       Escenarios: 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11
       Depende de: T-06, T-07
 
-- [ ] T-09 Validar todos los escenarios de spec.md y generar validacion.md
+- [X] T-09 Validar todos los escenarios de spec.md y generar validacion.md
       Archivos: specs/008-enviar-recordatorios-plazos/validacion.md
       Escenarios: 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11
       Depende de: T-08
