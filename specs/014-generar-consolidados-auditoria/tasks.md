@@ -25,7 +25,7 @@
       Escenarios: 6
       Depende de: ninguna
 
-- [ ] T-06 Implementar caso de uso GenerarConsolidadosAuditoriaCasoUso con filtrado, proyección inmutable de prácticas y actas finales, y registro en bitácora Append-Only
+- [X] T-06 Implementar caso de uso GenerarConsolidadosAuditoriaCasoUso con filtrado, proyección inmutable de prácticas y actas finales, y registro en bitácora Append-Only
       Archivos: aplicacion/casos_uso/generar_consolidados_auditoria.py
       Escenarios: 1, 2, 3, 4, 5, 6
       Depende de: T-01, T-02, T-03, T-04, T-05
