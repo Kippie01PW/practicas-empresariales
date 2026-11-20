@@ -1,6 +1,6 @@
 # Tareas: 006 Revisar avances de horas
 
-- [ ] T-01 Crear DTOs inmutables para consulta individual y consolidada de avances de horas
+- [X] T-01 Crear DTOs inmutables para consulta individual y consolidada de avances de horas
       Archivos: aplicacion/dtos/avance_horas_dto.py
       Escenarios: 1, 2, 3, 4, 5, 6, 13
       Depende de: ninguna
