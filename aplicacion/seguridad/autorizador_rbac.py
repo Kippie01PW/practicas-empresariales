@@ -31,6 +31,7 @@ class RolUsuario(str, Enum):
     COORDINADOR_PRACTICAS = "CoordinadorPracticas"
     SUPERVISOR = "Supervisor"
     SUPERVISOR_EMPRESA = "SupervisorEmpresa"
+    SISTEMA = "SISTEMA"
 
 
 @dataclass(frozen=True, slots=True)
@@ -173,6 +174,11 @@ class AutorizadorRBAC:
             RolUsuario.COORDINADOR.value,
             RolUsuario.COORDINADOR_PRACTICAS.value,
         },
+        "enviar_recordatorios": {
+            RolUsuario.SISTEMA.value,
+            RolUsuario.COORDINADOR.value,
+            RolUsuario.COORDINADOR_PRACTICAS.value,
+        },
     }
 
     # Alias reconocidos para normalización flexible de roles
@@ -189,6 +195,7 @@ class AutorizadorRBAC:
         "supervisor": RolUsuario.SUPERVISOR.value,
         "supervisorempresa": RolUsuario.SUPERVISOR_EMPRESA.value,
         "supervisor_empresa": RolUsuario.SUPERVISOR_EMPRESA.value,
+        "sistema": RolUsuario.SISTEMA.value,
     }
 
     @classmethod
@@ -700,6 +707,39 @@ class AutorizadorRBAC:
             roles_permitidos=[
                 RolUsuario.SUPERVISOR.value,
                 RolUsuario.SUPERVISOR_EMPRESA.value,
+            ],
+            operacion=operacion,
+            usuario_id=usuario_id,
+        )
+
+    def validar_envio_recordatorios(
+        self,
+        rol_actor: str,
+        usuario_id: Optional[str] = None,
+        operacion: str = "enviar_recordatorios",
+    ) -> None:
+        """Valida las autorizaciones específicas para el envío de recordatorios de plazos (CU-08).
+
+        Traza: CU-08, Escenarios 6, 9 y 11, ADR-005, EAC-03, RN-03.
+        Asegura bajo política deny-by-default que la ejecución de recordatorios solo
+        sea invocada por la tarea programada automatizada ('SISTEMA') o disparada
+        manualmente por el 'Coordinador de prácticas' ('Coordinador' / 'CoordinadorPracticas').
+        Cualquier intento por Estudiante, DocenteAsesor o SupervisorEmpresa es denegado.
+
+        Args:
+            rol_actor: Rol presentado por el actor o usuario autenticado.
+            usuario_id: Identificador del actor o usuario (opcional).
+            operacion: Nombre de la operación evaluada ('enviar_recordatorios').
+
+        Raises:
+            AccesoDenegadoError: Si el rol del actor no es SISTEMA ni Coordinador de prácticas.
+        """
+        self.validar_rol(
+            rol_actor=rol_actor,
+            roles_permitidos=[
+                RolUsuario.SISTEMA.value,
+                RolUsuario.COORDINADOR.value,
+                RolUsuario.COORDINADOR_PRACTICAS.value,
             ],
             operacion=operacion,
             usuario_id=usuario_id,

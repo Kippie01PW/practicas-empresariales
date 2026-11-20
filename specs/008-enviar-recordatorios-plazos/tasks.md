@@ -20,7 +20,7 @@
       Escenarios: 1, 2, 3, 6, 8, 11
       Depende de: T-02
 
-- [ ] T-05 Configurar rol SISTEMA y método de autorización RBAC deny-by-default para envío automático y disparo manual de recordatorios por Coordinador de prácticas
+- [X] T-05 Configurar rol SISTEMA y método de autorización RBAC deny-by-default para envío automático y disparo manual de recordatorios por Coordinador de prácticas
       Archivos: aplicacion/seguridad/autorizador_rbac.py
       Escenarios: 6, 9, 11
       Depende de: ninguna
