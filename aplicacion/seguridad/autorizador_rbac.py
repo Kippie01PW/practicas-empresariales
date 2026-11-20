@@ -1,6 +1,6 @@
 """Componente centralizado de autorización basada en roles (RBAC) en la capa de Aplicación.
 
-Traza: CU-01, CU-02, CU-03, CU-04, CU-05, CU-06, CU-07, CU-08, CU-09, CU-10, CU-11, CU-12, RN-01, RN-03, PA-02, ADR-002, ADR-004, ADR-005,
+Traza: CU-01, CU-02, CU-03, CU-04, CU-05, CU-06, CU-07, CU-08, CU-09, CU-10, CU-11, CU-12, CU-13, RN-01, RN-03, PA-02, ADR-002, ADR-004, ADR-005,
 Vista Lógica §2, Vista de Desarrollo §2.
 
 Implementa la política de autorización RBAC centralizada y contextual (Context-Based Access Control)
@@ -8,7 +8,8 @@ bajo la regla 'deny-by-default' (ADR-005). Valida tanto el rol del actor autenti
 pertenencia de los recursos según la identidad del usuario (e.g. un estudiante solo puede postularse
 a sí mismo y ver sus datos, RN-01, CU-01, CU-11; un supervisor solo puede validar horas y evaluar desempeño de su
 práctica asignada, RN-01, CU-05, CU-07; un docente asesor solo puede revisar avances de horas y generar
-el acta final de sus practicantes asignados, RN-01, CU-06, CU-09).
+el acta final de sus practicantes asignados, RN-01, CU-06, CU-09; un coordinador de prácticas solo
+puede monitorear el estado general de las prácticas de su programa académico adscrito, RN-01, CU-13).
 """
 
 from __future__ import annotations
@@ -181,6 +182,10 @@ class AutorizadorRBAC:
         },
         "consultar_estado_tramite": {
             RolUsuario.ESTUDIANTE.value,
+        },
+        "monitorear_practicas": {
+            RolUsuario.COORDINADOR.value,
+            RolUsuario.COORDINADOR_PRACTICAS.value,
         },
     }
 
@@ -988,4 +993,97 @@ class AutorizadorRBAC:
             usuario_id=actor_id,
             operacion=operacion,
         )
+
+    def validar_monitoreo_practicas(
+        self,
+        rol_actor: str,
+        usuario_id: Optional[str] = None,
+        operacion: str = "monitorear_practicas",
+    ) -> None:
+        """Valida las autorizaciones específicas para el monitoreo del estado general de prácticas (CU-13).
+
+        Traza: CU-13, Escenarios 1, 2, 3, 4, 5, 6, 7 y 8, ADR-004, ADR-005 (política deny-by-default),
+        EAC-03 (100% accesos no válidos rechazados, 0 datos expuestos), RN-01, RN-03.
+
+        Verifica bajo política *deny-by-default* que el actor tenga identidad institucional válida
+        (no vacía cuando se suministra) y posea exclusivamente el rol ``Coordinador`` o
+        ``CoordinadorPracticas`` (``"Coordinador de prácticas"``). Cualquier intento de invocación
+        por roles distintos (``Estudiante``, ``DocenteAsesor``, ``SupervisorEmpresa``, ``SISTEMA``
+        o solicitudes sin sesión/rol válido) lanza ``AccesoDenegadoError``.
+
+        Args:
+            rol_actor: Rol presentado por el usuario autenticado.
+            usuario_id: Identificador del usuario autenticado (opcional).
+            operacion: Nombre de la operación evaluada ('monitorear_practicas').
+
+        Raises:
+            AccesoDenegadoError: Si el usuario_id es inválido o el rol del actor no es Coordinador de prácticas.
+        """
+        if usuario_id is not None and not str(usuario_id).strip():
+            raise AccesoDenegadoError(
+                "Acceso denegado: No se ha provisto una identidad de usuario institucional válida.",
+                rol_actor=rol_actor,
+                operacion=operacion,
+                usuario_id=usuario_id,
+            )
+
+        self.validar_rol(
+            rol_actor=rol_actor,
+            roles_permitidos=[
+                RolUsuario.COORDINADOR.value,
+                RolUsuario.COORDINADOR_PRACTICAS.value,
+            ],
+            operacion=operacion,
+            usuario_id=usuario_id,
+        )
+
+    def validar_pertenencia_programa_coordinador(
+        self,
+        contexto: ContextoUsuario,
+        programa_coordinador: str,
+        programa_objetivo: str,
+        operacion: str = "monitorear_practicas",
+    ) -> None:
+        """Valida que un coordinador de prácticas solo consulte o filtre prácticas de su programa académico (CU-13).
+
+        Traza: CU-13, Escenarios 1, 4, 5 y 8 (Pertenencia contextual por programa académico),
+        RN-01 (Pertenencia contextual de datos), ADR-005 (RBAC centralizado), EAC-03 (0 datos expuestos).
+
+        Verifica bajo control de acceso contextual (*Context-Based RBAC*) que el ``programa_coordinador``
+        y el ``programa_objetivo`` estén definidos y coincidan (comparación normalizada sin distinción
+        de mayúsculas/minúsculas ni espacios extremos). Si difieren, lanza ``AccesoDenegadoError``.
+
+        Args:
+            contexto: Contexto de identidad del coordinador autenticado.
+            programa_coordinador: Programa académico al que pertenece el coordinador autenticado.
+            programa_objetivo: Programa académico de la práctica o del filtro solicitado.
+            operacion: Operación invocada (por defecto 'monitorear_practicas').
+
+        Raises:
+            AccesoDenegadoError: Si alguno de los programas está vacío o si el programa objetivo
+                difiere del programa académico del coordinador autenticado.
+        """
+        detalle_op = f" para la operación '{operacion}'" if operacion else ""
+        prog_coord = str(programa_coordinador or "").strip()
+        prog_obj = str(programa_objetivo or "").strip()
+
+        if not prog_coord:
+            raise AccesoDenegadoError(
+                f"Violación de pertenencia contextual{detalle_op}: El coordinador autenticado "
+                f"'{contexto.usuario_id}' no tiene un programa académico adscrito válido (RN-01).",
+                rol_actor=contexto.rol,
+                operacion=operacion,
+                usuario_id=contexto.usuario_id,
+            )
+
+        if not prog_obj or prog_coord.lower() != prog_obj.lower():
+            raise AccesoDenegadoError(
+                f"Violación de pertenencia contextual{detalle_op}: El coordinador autenticado "
+                f"'{contexto.usuario_id}' adscrito al programa '{prog_coord}' no está autorizado "
+                f"para acceder o filtrar prácticas del programa académico '{prog_obj}' (RN-01).",
+                rol_actor=contexto.rol,
+                operacion=operacion,
+                usuario_id=contexto.usuario_id,
+            )
+
 

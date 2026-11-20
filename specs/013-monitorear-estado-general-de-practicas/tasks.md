@@ -10,7 +10,7 @@
       Escenarios: 1, 2, 3, 6, 9, 10
       Depende de: ninguna
 
-- [ ] T-03 Configurar regla de autorización RBAC exclusiva para Coordinador de prácticas y pertenencia contextual por programa académico en AutorizadorRBAC
+- [X] T-03 Configurar regla de autorización RBAC exclusiva para Coordinador de prácticas y pertenencia contextual por programa académico en AutorizadorRBAC
       Archivos: aplicacion/seguridad/autorizador_rbac.py
       Escenarios: 1, 2, 3, 4, 5, 6, 7, 8
       Depende de: ninguna
