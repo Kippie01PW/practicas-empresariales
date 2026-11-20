@@ -55,7 +55,7 @@
       Escenarios: 1, 2, 4
       Depende de: T-06
 
-- [ ] T-12 Implementar publicación del evento ActaFinalEmitida en adaptador InMemoryBrokerMensajes
+- [X] T-12 Implementar publicación del evento ActaFinalEmitida en adaptador InMemoryBrokerMensajes
       Archivos: infraestructura/adaptadores/broker_memoria.py
       Escenarios: 2
       Depende de: T-07
