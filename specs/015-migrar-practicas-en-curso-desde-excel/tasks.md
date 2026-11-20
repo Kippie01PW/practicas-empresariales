@@ -20,7 +20,7 @@
       Escenarios: 8
       Depende de: ninguna
 
-- [ ] T-05 Implementar caso de uso MigrarPracticasExcelCasoUso con modo dry-run y carga definitiva, validación por fila, omisión de duplicados, mapeo determinista de hitos a EstadoPractica, control de cupo docente, verificación de ReglaPrograma y registro en EventoBitacora
+- [X] T-05 Implementar caso de uso MigrarPracticasExcelCasoUso con modo dry-run y carga definitiva, validación por fila, omisión de duplicados, mapeo determinista de hitos a EstadoPractica, control de cupo docente, verificación de ReglaPrograma y registro en EventoBitacora
       Archivos: aplicacion/casos_uso/migrar_practicas_excel.py
       Escenarios: 1, 2, 3, 4, 5, 6, 7, 8
       Depende de: T-01, T-02, T-03, T-04
