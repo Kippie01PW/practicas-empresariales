@@ -25,7 +25,7 @@
       Escenarios: 1, 2, 3, 4, 5, 6, 7, 8
       Depende de: T-01, T-02, T-03, T-04
 
-- [ ] T-06 Implementar adaptador LectorPlantillaExcelSimulado para lectura de plantilla normalizada y validación de columnas obligatorias
+- [X] T-06 Implementar adaptador LectorPlantillaExcelSimulado para lectura de plantilla normalizada y validación de columnas obligatorias
       Archivos: infraestructura/adaptadores/lector_plantilla_excel_simulado.py
       Escenarios: 1, 2, 3, 4, 5, 6, 7
       Depende de: T-01, T-02, T-03
