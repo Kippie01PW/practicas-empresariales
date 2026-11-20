@@ -168,7 +168,7 @@ class InMemoryRepositorioPractica(RepositorioPracticaPort):
 class InMemoryRepositorioReglaPrograma(RepositorioReglaProgramaPort):
     """Implementación en memoria del puerto RepositorioReglaProgramaPort.
 
-    Almacena y consulta las reglas normativas y plantillas versionadas por programa académico.
+    Almacena y consulta las reglas normativas y plantillas versionadas por programa académico (CU-01, CU-12, ADR-007).
     """
 
     def __init__(self, reglas_iniciales: Optional[list[ReglaPrograma]] = None) -> None:
@@ -181,9 +181,15 @@ class InMemoryRepositorioReglaPrograma(RepositorioReglaProgramaPort):
         """Persiste una regla de programa versionada."""
         self._reglas[regla.id] = regla
 
+    def actualizar(self, regla: ReglaPrograma) -> None:
+        """Actualiza una regla de programa existente en el almacén en memoria (CU-12)."""
+        self._reglas[regla.id] = regla
+
     def buscar_por_id(self, regla_id: str) -> Optional[ReglaPrograma]:
         """Recupera una regla de programa por su identificador único."""
-        return self._reglas.get(regla_id)
+        if not regla_id:
+            return None
+        return self._reglas.get(regla_id.strip())
 
     def buscar_activa_por_programa(
         self, programa_academico: str
@@ -192,15 +198,51 @@ class InMemoryRepositorioReglaPrograma(RepositorioReglaProgramaPort):
 
         Si existen varias versiones activas, retorna la de vigencia más reciente.
         """
+        if not isinstance(programa_academico, str) or not programa_academico.strip():
+            return None
+        programa_norm = programa_academico.strip().lower()
         candidatas = [
             r
             for r in self._reglas.values()
-            if r.programa_academico == programa_academico and r.es_activa()
+            if r.programa_academico.strip().lower() == programa_norm and r.es_activa()
         ]
         if not candidatas:
             return None
         candidatas.sort(key=lambda r: r.fecha_vigencia, reverse=True)
         return candidatas[0]
+
+    def buscar_por_programa_y_version(
+        self, programa_academico: str, version: str
+    ) -> Optional[ReglaPrograma]:
+        """Recupera una regla de programa por su programa académico y versión normativa (CU-12, Escenario 7)."""
+        if (
+            not isinstance(programa_academico, str)
+            or not programa_academico.strip()
+            or not isinstance(version, str)
+            or not version.strip()
+        ):
+            return None
+        programa_norm = programa_academico.strip().lower()
+        version_norm = version.strip().lower()
+        for regla in self._reglas.values():
+            if (
+                regla.programa_academico.strip().lower() == programa_norm
+                and regla.version.strip().lower() == version_norm
+            ):
+                return regla
+        return None
+
+    def listar_por_programa(self, programa_academico: str) -> list[ReglaPrograma]:
+        """Lista todas las versiones de reglas registradas para un programa académico ordenadas por fecha_vigencia (CU-12)."""
+        if not isinstance(programa_academico, str) or not programa_academico.strip():
+            return []
+        programa_norm = programa_academico.strip().lower()
+        reglas = [
+            r
+            for r in self._reglas.values()
+            if r.programa_academico.strip().lower() == programa_norm
+        ]
+        return sorted(reglas, key=lambda r: r.fecha_vigencia)
 
     def listar_todas(self) -> list[ReglaPrograma]:
         """Retorna todas las reglas configuradas."""

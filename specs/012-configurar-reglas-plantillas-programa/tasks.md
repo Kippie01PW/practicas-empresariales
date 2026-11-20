@@ -35,7 +35,7 @@
       Escenarios: 1, 2, 3, 4, 5, 6, 7, 8, 9, 10
       Depende de: T-01, T-02, T-03, T-04, T-05, T-06
 
-- [ ] T-08 Ampliar adaptador en memoria InMemoryRepositorioReglaPrograma con actualización y búsqueda por programa y versión
+- [X] T-08 Ampliar adaptador en memoria InMemoryRepositorioReglaPrograma con actualización y búsqueda por programa y versión
       Archivos: infraestructura/adaptadores/repositorio_memoria.py
       Escenarios: 1, 2, 3, 4, 7, 8, 10
       Depende de: T-02, T-04
