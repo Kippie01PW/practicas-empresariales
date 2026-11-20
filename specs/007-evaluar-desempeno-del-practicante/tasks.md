@@ -40,7 +40,7 @@
       Escenarios: 2, 3, 4, 12
       Depende de: T-02, T-05
 
-- [ ] T-09 Integrar InMemoryRepositorioEvaluacionDesempeno y EvaluarDesempenoCasoUso en el punto de composición main.py
+- [X] T-09 Integrar InMemoryRepositorioEvaluacionDesempeno y EvaluarDesempenoCasoUso en el punto de composición main.py
       Archivos: main.py
       Escenarios: 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16
       Depende de: T-07, T-08

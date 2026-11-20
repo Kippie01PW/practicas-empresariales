@@ -28,6 +28,7 @@ import sys
 from dataclasses import dataclass
 
 from aplicacion.casos_uso.asignar_docente_asesor import AsignarDocenteAsesorCasoUso
+from aplicacion.casos_uso.evaluar_desempeno import EvaluarDesempenoCasoUso
 from aplicacion.casos_uso.evaluar_postulacion import EvaluarPostulacionCasoUso
 from aplicacion.casos_uso.postular_estudiante import PostularEstudianteCasoUso
 from aplicacion.casos_uso.registrar_horas import RegistrarHorasCasoUso
@@ -43,6 +44,12 @@ from aplicacion.dtos.avance_horas_dto import (
     ConsultarAvanceHorasComando,
     ConsultarAvancesDocenteComando,
     ListadoAvancesDocenteRespuestaDTO,
+)
+from aplicacion.dtos.evaluacion_desempeno_dto import (
+    ConsultarFormularioEvaluacionComando,
+    EvaluacionDesempenoRespuestaDTO,
+    EvaluarDesempenoComando,
+    FormularioEvaluacionRespuestaDTO,
 )
 from aplicacion.dtos.evaluacion_postulacion_dto import (
     EvaluacionPostulacionRespuestaDTO,
@@ -67,6 +74,7 @@ from infraestructura.adaptadores.broker_memoria import InMemoryBrokerMensajes
 from infraestructura.adaptadores.cliente_sia_simulado import AdaptadorSiaSimulado
 from infraestructura.adaptadores.repositorio_memoria import (
     InMemoryRepositorioDocente,
+    InMemoryRepositorioEvaluacionDesempeno,
     InMemoryRepositorioPractica,
     InMemoryRepositorioRegistroHoras,
     InMemoryRepositorioReglaPrograma,
@@ -95,6 +103,7 @@ class SistemaPracticasEmpresariales:
     caso_uso_registrar_horas: RegistrarHorasCasoUso
     caso_uso_validar_horas: ValidarHorasRegistradasCasoUso
     caso_uso_revisar_avances_horas: RevisarAvancesHorasCasoUso
+    caso_uso_evaluar_desempeno: EvaluarDesempenoCasoUso
 
     # Componentes de seguridad y autorización
     autorizador_rbac: AutorizadorRBAC
@@ -107,6 +116,7 @@ class SistemaPracticasEmpresariales:
     repositorio_docente: InMemoryRepositorioDocente
     repositorio_registro_horas: InMemoryRepositorioRegistroHoras
     repositorio_token: InMemoryRepositorioTokenEvaluacion
+    repositorio_evaluacion: InMemoryRepositorioEvaluacionDesempeno
     servicio_sia: AdaptadorSiaSimulado
     broker_mensajes: InMemoryBrokerMensajes
     servicio_correo: AdaptadorCorreoSimulado
@@ -132,6 +142,7 @@ def inicializar_sistema(
     repo_docente = InMemoryRepositorioDocente()
     repo_registro_horas = InMemoryRepositorioRegistroHoras()
     repo_token = InMemoryRepositorioTokenEvaluacion()
+    repo_evaluacion = InMemoryRepositorioEvaluacionDesempeno()
     servicio_sia = AdaptadorSiaSimulado(umbral_fallos=umbral_fallos_sia)
     broker_mensajes = InMemoryBrokerMensajes()
     servicio_correo = AdaptadorCorreoSimulado()
@@ -252,6 +263,17 @@ def inicializar_sistema(
         autorizador_rbac=autorizador_rbac,
     )
 
+    caso_uso_evaluar_desempeno = EvaluarDesempenoCasoUso(
+        repositorio_practica=repo_practica,
+        repositorio_regla=repo_regla,
+        repositorio_evaluacion=repo_evaluacion,
+        repositorio_token_evaluacion=repo_token,
+        repositorio_docente=repo_docente,
+        servicio_correo=servicio_correo,
+        autorizador_rbac=autorizador_rbac,
+        interceptor_identidad=interceptor_identidad,
+    )
+
     return SistemaPracticasEmpresariales(
         caso_uso_postular=caso_uso_postular,
         caso_uso_reintentar_sia=caso_uso_reintentar_sia,
@@ -260,6 +282,7 @@ def inicializar_sistema(
         caso_uso_registrar_horas=caso_uso_registrar_horas,
         caso_uso_validar_horas=caso_uso_validar_horas,
         caso_uso_revisar_avances_horas=caso_uso_revisar_avances_horas,
+        caso_uso_evaluar_desempeno=caso_uso_evaluar_desempeno,
         autorizador_rbac=autorizador_rbac,
         proveedor_identidad=proveedor_identidad,
         interceptor_identidad=interceptor_identidad,
@@ -268,6 +291,7 @@ def inicializar_sistema(
         repositorio_docente=repo_docente,
         repositorio_registro_horas=repo_registro_horas,
         repositorio_token=repo_token,
+        repositorio_evaluacion=repo_evaluacion,
         servicio_sia=servicio_sia,
         broker_mensajes=broker_mensajes,
         servicio_correo=servicio_correo,
@@ -288,6 +312,7 @@ def main() -> int:
     print("    - Repositorio de Docentes:  InMemoryRepositorioDocente")
     print("    - Repositorio de Horas:     InMemoryRepositorioRegistroHoras")
     print("    - Repositorio de Tokens:    InMemoryRepositorioTokenEvaluacion")
+    print("    - Repositorio Evaluaciones: InMemoryRepositorioEvaluacionDesempeno")
     print("    - Servicio SIA:             AdaptadorSiaSimulado (Circuit Breaker activo)")
     print("    - Bróker de Mensajería:     InMemoryBrokerMensajes (Tareas + DLQ)")
     print("    - Servicio de Correo:       AdaptadorCorreoSimulado")
@@ -298,7 +323,8 @@ def main() -> int:
     print("                                AsignarDocenteAsesorCasoUso (CU-03),")
     print("                                RegistrarHorasCasoUso (CU-04),")
     print("                                ValidarHorasRegistradasCasoUso (CU-05),")
-    print("                                RevisarAvancesHorasCasoUso (CU-06)")
+    print("                                RevisarAvancesHorasCasoUso (CU-06),")
+    print("                                EvaluarDesempenoCasoUso (CU-07)")
 
     # Demostración del Escenario 1: Postulación exitosa
     print("\n--- Demostración CU-01: Postulación exitosa (Escenario 1) ---")
@@ -461,6 +487,51 @@ def main() -> int:
         sistema.caso_uso_revisar_avances_horas.listar_por_docente(comando_listado_docente)
     )
     print(f"Consulta consolidada: {respuesta_listado.total_practicas_asignadas} práctica(s) asignada(s) a doc_001")
+
+    eventos = sistema.repositorio_practica.buscar_eventos_por_entidad(f"Practica:{respuesta.practica_id}")
+    print(f"Total eventos en bitácora:     {len(eventos)}")
+
+    # Demostración CU-07: Evaluación de desempeño por Supervisor de Empresa mediante Magic Link
+    print("\n--- Demostración CU-07: Evaluación de Desempeño del Practicante (Escenarios 1 y 2) ---")
+    token_desempeno = sistema.interceptor_identidad.generar_token(
+        practica_id=respuesta.practica_id or "",
+        supervisor_id=supervisor_demo_id,
+    )
+    comando_formulario = ConsultarFormularioEvaluacionComando(
+        token_acceso=token_desempeno.token,
+        practica_id=respuesta.practica_id,
+        ip_origen="192.168.1.80",
+    )
+    formulario_dto: FormularioEvaluacionRespuestaDTO = (
+        sistema.caso_uso_evaluar_desempeno.obtener_formulario_evaluacion(comando_formulario)
+    )
+    print(
+        f"Rúbrica cargada:      Regla {formulario_dto.regla_programa_id} v{formulario_dto.version_regla} "
+        f"(Criterios: {list(formulario_dto.criterios_rubrica.keys())})"
+    )
+    print(f"Token tras consulta:  usado={token_desempeno.usado}")
+
+    comando_evaluar_desempeno = EvaluarDesempenoComando(
+        practica_id=respuesta.practica_id or "",
+        calificacion_cuantitativa=4.5,
+        respuestas_rubrica={
+            "dominio_tecnico": 4.6,
+            "habilidades_blandas": 4.5,
+            "cumplimiento_objetivos": 4.4,
+        },
+        observaciones="Excelente desempeño técnico, cumplimiento de objetivos y trabajo en equipo",
+        token_acceso=token_desempeno.token,
+        supervisor_id=supervisor_demo_id,
+        ip_origen="192.168.1.80",
+    )
+    respuesta_desempeno: EvaluacionDesempenoRespuestaDTO = sistema.caso_uso_evaluar_desempeno(
+        comando_evaluar_desempeno
+    )
+    print(f"Evaluación ID:        {respuesta_desempeno.evaluacion_id}")
+    print(f"Calificación:         {respuesta_desempeno.calificacion_cuantitativa} (Aprobatoria: {respuesta_desempeno.es_aprobatoria})")
+    print(f"Nuevo estado práctica:{respuesta_desempeno.estado_practica}")
+    print(f"Token consumido:      {respuesta_desempeno.token_consumido}")
+    print(f"Mensaje:              {respuesta_desempeno.mensaje}")
 
     eventos = sistema.repositorio_practica.buscar_eventos_por_entidad(f"Practica:{respuesta.practica_id}")
     print(f"Total eventos en bitácora:     {len(eventos)}")
