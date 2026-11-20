@@ -15,7 +15,7 @@
       Escenarios: 1, 2, 3, 4, 5, 6, 7, 8
       Depende de: ninguna
 
-- [ ] T-04 Implementar caso de uso MonitorearPracticasCasoUso en modo solo lectura con restricción automática al programa del coordinador, filtrado por documento del Estudiante y trazabilidad en bitácora
+- [X] T-04 Implementar caso de uso MonitorearPracticasCasoUso en modo solo lectura con restricción automática al programa del coordinador, filtrado por documento del Estudiante y trazabilidad en bitácora
       Archivos: aplicacion/casos_uso/monitorear_practicas.py
       Escenarios: 1, 2, 3, 4, 5, 6, 7, 8, 9, 10
       Depende de: T-01, T-02, T-03
