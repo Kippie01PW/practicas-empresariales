@@ -1,6 +1,6 @@
 """Excepciones y errores de la capa de dominio.
 
-Traza: CU-01, CU-02, CU-03, CU-04, CU-05, ADR-002, ADR-004, ADR-005,
+Traza: CU-01, CU-02, CU-03, CU-04, CU-05, CU-07, ADR-002, ADR-004, ADR-005,
 ADR-006, ADR-007, ADR-010.
 
 Define las excepciones del modelo de dominio del sistema de gestión de prácticas
@@ -8,7 +8,8 @@ empresariales. Estas excepciones encapsulan violaciones a invariantes y reglas
 fundamentales de negocio (e.g. prácticas activas simultáneas, falta de reglas
 normativas vigentes, transiciones no permitidas en el ciclo de vida, justificación
 obligatoria de rechazo, cupos de tutores excedidos, registros de horas inválidos,
-credenciales tokenizadas efímeras y validación contextual de horas registradas).
+credenciales tokenizadas efímeras, validación contextual de horas registradas y
+evaluación de desempeño del practicante).
 """
 
 from __future__ import annotations
@@ -720,4 +721,206 @@ class SupervisorNoAsignadoAPracticaError(ErrorDominio):
             f"supervisor_id={self.supervisor_id!r}, "
             f"practica_id={self.practica_id!r})"
         )
+
+
+# ---------------------------------------------------------------------------
+# CU-07: Excepciones para evaluación de desempeño del practicante, escala
+#        cuantitativa y rúbrica (ADR-007, ADR-010, EAC-01, RN-02)
+# ---------------------------------------------------------------------------
+
+
+class EstadoPracticaInvalidoParaEvaluacionError(ErrorDominio):
+    """Excepción lanzada cuando se intenta evaluar una práctica en estado distinto a EnEjecucion.
+
+    Traza: CU-07, Escenario 11 (Intento de evaluar desempeño sobre una práctica en estado
+    distinto a EnEjecucion), RN-02, ADR-010 (Máquina de estados finitos).
+
+    Solo se puede evaluar el desempeño de prácticas que se encuentren formalmente en
+    estado 'EnEjecucion'.
+    """
+
+    def __init__(
+        self,
+        practica_id: Optional[str] = None,
+        estado_actual: Optional[str] = None,
+        mensaje: Optional[str] = None,
+    ) -> None:
+        self.practica_id: Optional[str] = practica_id
+        self.estado_actual: Optional[str] = estado_actual
+
+        if mensaje is None:
+            detalle_id = f" '{practica_id}'" if practica_id else ""
+            detalle_estado = f" (estado actual: '{estado_actual}')" if estado_actual else ""
+            mensaje = (
+                f"Solo se puede evaluar el desempeño de prácticas que se encuentren formalmente "
+                f"en estado 'EnEjecucion'. La práctica{detalle_id} no se encuentra en dicho "
+                f"estado{detalle_estado}."
+            )
+        super().__init__(mensaje)
+
+    def __repr__(self) -> str:
+        return (
+            f"EstadoPracticaInvalidoParaEvaluacionError("
+            f"practica_id={self.practica_id!r}, "
+            f"estado_actual={self.estado_actual!r})"
+        )
+
+
+class PracticaYaEvaluadaError(DecisionPreviaEnFirmeError):
+    """Excepción lanzada cuando se intenta evaluar una práctica que ya cuenta con una evaluación registrada.
+
+    Traza: CU-07, Escenario 11 y Escenario 12 (Intento de evaluar una práctica que ya cuenta con
+    una EvaluacionDesempeno registrada), RN-02, ADR-010.
+
+    Cada práctica puede recibir como máximo una única EvaluacionDesempeno en firme.
+    """
+
+    def __init__(
+        self,
+        practica_id: Optional[str] = None,
+        evaluacion_id: Optional[str] = None,
+        mensaje: Optional[str] = None,
+    ) -> None:
+        self.evaluacion_id: Optional[str] = evaluacion_id
+
+        if mensaje is None:
+            detalle_id = f" '{practica_id}'" if practica_id else ""
+            detalle_eval = f" (evaluación ID: '{evaluacion_id}')" if evaluacion_id else ""
+            mensaje = (
+                f"La práctica{detalle_id} ya cuenta con una EvaluacionDesempeno registrada en firme"
+                f"{detalle_eval}. Cada práctica solo puede recibir como máximo una única evaluación."
+            )
+        super().__init__(
+            estado_actual="Evaluada",
+            practica_id=practica_id,
+            mensaje=mensaje,
+        )
+
+    def __repr__(self) -> str:
+        return (
+            f"PracticaYaEvaluadaError("
+            f"practica_id={self.practica_id!r}, "
+            f"evaluacion_id={self.evaluacion_id!r})"
+        )
+
+
+class CalificacionCuantitativaInvalidaError(ErrorDominio):
+    """Excepción lanzada cuando la calificación cuantitativa está fuera de la escala de 0.0 a 5.0.
+
+    Traza: CU-07, Escenario 6 (Rechazo de evaluación por calificación cuantitativa fuera de la
+    escala permitida de 0.0 a 5.0), ADR-007.
+    """
+
+    def __init__(
+        self,
+        calificacion: float,
+        escala_minima: float = 0.0,
+        escala_maxima: float = 5.0,
+        mensaje: Optional[str] = None,
+    ) -> None:
+        self.calificacion: float = calificacion
+        self.escala_minima: float = escala_minima
+        self.escala_maxima: float = escala_maxima
+
+        if mensaje is None:
+            mensaje = (
+                f"La calificación cuantitativa debe encontrarse en la escala de "
+                f"{escala_minima:.1f} a {escala_maxima:.1f} (recibido: {calificacion})."
+            )
+        super().__init__(mensaje)
+
+    def __repr__(self) -> str:
+        return (
+            f"CalificacionCuantitativaInvalidaError("
+            f"calificacion={self.calificacion!r}, "
+            f"escala_minima={self.escala_minima!r}, "
+            f"escala_maxima={self.escala_maxima!r})"
+        )
+
+
+class ObservacionesReprobatoriaRequeridasError(ErrorDominio):
+    """Excepción lanzada cuando una evaluación reprobatoria (< 3.0) carece de observaciones obligatorias.
+
+    Traza: CU-07, Escenario 5 (Rechazo de evaluación reprobatoria por ausencia de observaciones
+    obligatorias), RN-02.
+    """
+
+    def __init__(
+        self,
+        calificacion: Optional[float] = None,
+        umbral_aprobacion: float = 3.0,
+        mensaje: Optional[str] = None,
+    ) -> None:
+        self.calificacion: Optional[float] = calificacion
+        self.umbral_aprobacion: float = umbral_aprobacion
+
+        if mensaje is None:
+            detalle_nota = f" (nota recibida: {calificacion})" if calificacion is not None else ""
+            mensaje = (
+                f"Las observaciones son obligatorias cuando la calificación cuantitativa es "
+                f"reprobatoria (inferior a {umbral_aprobacion:.1f}){detalle_nota}."
+            )
+        super().__init__(mensaje)
+
+    def __repr__(self) -> str:
+        return (
+            f"ObservacionesReprobatoriaRequeridasError("
+            f"calificacion={self.calificacion!r}, "
+            f"umbral_aprobacion={self.umbral_aprobacion!r})"
+        )
+
+
+class RespuestasRubricaInvalidasError(ErrorDominio):
+    """Excepción lanzada cuando las respuestas de la rúbrica son incompletas o inválidas respecto a la regla.
+
+    Traza: CU-07, Escenario 7 (Rechazo de evaluación por respuestas incompletas o inválidas respecto
+    a los criterios de la rúbrica del programa), EAC-01, ADR-007.
+    """
+
+    def __init__(
+        self,
+        criterios_faltantes: Optional[list[str]] = None,
+        criterios_fuera_rango: Optional[dict[str, float]] = None,
+        criterios_desconocidos: Optional[list[str]] = None,
+        mensaje: Optional[str] = None,
+    ) -> None:
+        self.criterios_faltantes: list[str] = list(criterios_faltantes or [])
+        self.criterios_fuera_rango: dict[str, float] = dict(criterios_fuera_rango or {})
+        self.criterios_desconocidos: list[str] = list(criterios_desconocidos or [])
+
+        if mensaje is None:
+            detalles: list[str] = []
+            if self.criterios_faltantes:
+                detalles.append(
+                    f"criterios faltantes: {', '.join(repr(c) for c in self.criterios_faltantes)}"
+                )
+            if self.criterios_fuera_rango:
+                items = ", ".join(f"{k!r}={v}" for k, v in self.criterios_fuera_rango.items())
+                detalles.append(
+                    f"criterios fuera del rango permitido (0.0 a 5.0): {items}"
+                )
+            if self.criterios_desconocidos:
+                detalles.append(
+                    f"criterios no definidos en la rúbrica del programa: "
+                    f"{', '.join(repr(c) for c in self.criterios_desconocidos)}"
+                )
+            if detalles:
+                mensaje = (
+                    f"Las respuestas de la rúbrica de evaluación son inválidas ({'; '.join(detalles)})."
+                )
+            else:
+                mensaje = (
+                    "Las respuestas de la rúbrica de evaluación son incompletas o presentan "
+                    "valores fuera de la escala permitida de 0.0 a 5.0."
+                )
+        super().__init__(mensaje)
+
+    def __repr__(self) -> str:
+        return (
+            f"RespuestasRubricaInvalidasError("
+            f"criterios_faltantes={self.criterios_faltantes!r}, "
+            f"criterios_fuera_rango={self.criterios_fuera_rango!r}, "
+            f"criterios_desconocidos={self.criterios_desconocidos!r})"
+        )
+
 

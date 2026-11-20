@@ -1,6 +1,6 @@
 # Tareas: 007 Evaluar desempeño del practicante
 
-- [ ] T-01 Incorporar excepciones de dominio para evaluación de desempeño, escala cuantitativa y rúbrica
+- [X] T-01 Incorporar excepciones de dominio para evaluación de desempeño, escala cuantitativa y rúbrica
       Archivos: dominio/errores.py
       Escenarios: 5, 6, 7, 11, 12
       Depende de: ninguna
