@@ -1,6 +1,6 @@
 """Adaptadores de persistencia en memoria para Práctica, ReglaPrograma, DocenteAsesor, RegistroHoras, TokenEvaluacion y Bitácora.
 
-Traza: CU-01, CU-02, CU-03, CU-04, CU-05, CU-12, EAC-01, EAC-02, EAC-03, RT-01, ADR-001, ADR-002, ADR-003, ADR-004, ADR-006, ADR-007, ADR-010.
+Traza: CU-01, CU-02, CU-03, CU-04, CU-05, CU-06, CU-12, EAC-01, EAC-02, EAC-03, RT-01, RN-01, ADR-001, ADR-002, ADR-003, ADR-004, ADR-006, ADR-007, ADR-010.
 Vista Lógica §2, Vista de Desarrollo §2.
 
 Implementa los puertos `RepositorioPracticaPort`, `RepositorioReglaProgramaPort`,
@@ -61,6 +61,21 @@ class InMemoryRepositorioPractica(RepositorioPracticaPort):
             if practica.estudiante_id == estudiante_id and practica.es_activa():
                 return practica
         return None
+
+    def listar_por_docente(self, docente_asesor_id: str) -> list[Practica]:
+        """Retorna las prácticas asignadas al docente asesor indicado (CU-06, RN-01, RT-01).
+
+        Filtra estrictamente aquellas prácticas cuyo tutor asignado coincide con el
+        identificador solicitado, sin exponer prácticas asignadas a otros tutores.
+        """
+        docente_id_limpio = docente_asesor_id.strip()
+        if not docente_id_limpio:
+            return []
+        return [
+            p
+            for p in self._practicas.values()
+            if p.docente_asesor_id == docente_id_limpio
+        ]
 
     def guardar_intento_validacion(self, intento: IntentoValidacion) -> None:
         """Registra un intento de validación frente al SIA (ADR-001, EAC-02)."""
