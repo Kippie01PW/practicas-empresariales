@@ -25,7 +25,7 @@
       Escenarios: 7, 8, 13
       Depende de: T-02
 
-- [ ] T-06 Integrar ConsultarEstadoTramiteCasoUso en el punto de composición main.py
+- [X] T-06 Integrar ConsultarEstadoTramiteCasoUso en el punto de composición main.py
       Archivos: main.py
       Escenarios: 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13
       Depende de: T-04, T-05

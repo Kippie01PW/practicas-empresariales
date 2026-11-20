@@ -33,6 +33,7 @@ from aplicacion.casos_uso.aprobar_acta_electronicamente import (
     AprobarActaElectronicamenteCasoUso,
 )
 from aplicacion.casos_uso.asignar_docente_asesor import AsignarDocenteAsesorCasoUso
+from aplicacion.casos_uso.consultar_estado_tramite import ConsultarEstadoTramiteCasoUso
 from aplicacion.casos_uso.enviar_recordatorios_plazos import (
     EnviarRecordatoriosPlazosCasoUso,
 )
@@ -63,6 +64,10 @@ from aplicacion.dtos.avance_horas_dto import (
     ConsultarAvanceHorasComando,
     ConsultarAvancesDocenteComando,
     ListadoAvancesDocenteRespuestaDTO,
+)
+from aplicacion.dtos.estado_tramite_dto import (
+    ConsultarEstadoTramiteComando,
+    EstadoTramitePracticaRespuestaDTO,
 )
 from aplicacion.dtos.evaluacion_desempeno_dto import (
     ConsultarFormularioEvaluacionComando,
@@ -310,6 +315,7 @@ class SistemaPracticasEmpresariales:
     caso_uso_enviar_recordatorios: EnviarRecordatoriosPlazosCasoUso
     caso_uso_generar_acta: GenerarActaFinalCasoUso
     caso_uso_aprobar_acta: AprobarActaElectronicamenteCasoUso
+    caso_uso_consultar_estado_tramite: ConsultarEstadoTramiteCasoUso
 
     # Componentes de seguridad y autorización
     autorizador_rbac: AutorizadorRBAC
@@ -519,6 +525,16 @@ def inicializar_sistema(
         servicio_correo=servicio_correo,
     )
 
+    caso_uso_consultar_estado_tramite = ConsultarEstadoTramiteCasoUso(
+        repositorio_practica=repo_practica,
+        repositorio_regla=repo_regla,
+        repositorio_docente=repo_docente,
+        repositorio_registro_horas=repo_registro_horas,
+        repositorio_evaluacion=repo_evaluacion,
+        repositorio_acta_final=repo_acta,
+        autorizador_rbac=autorizador_rbac,
+    )
+
     return SistemaPracticasEmpresariales(
         caso_uso_postular=caso_uso_postular,
         caso_uso_reintentar_sia=caso_uso_reintentar_sia,
@@ -531,6 +547,7 @@ def inicializar_sistema(
         caso_uso_enviar_recordatorios=caso_uso_enviar_recordatorios,
         caso_uso_generar_acta=caso_uso_generar_acta,
         caso_uso_aprobar_acta=caso_uso_aprobar_acta,
+        caso_uso_consultar_estado_tramite=caso_uso_consultar_estado_tramite,
         autorizador_rbac=autorizador_rbac,
         proveedor_identidad=proveedor_identidad,
         interceptor_identidad=interceptor_identidad,
@@ -581,7 +598,8 @@ def main() -> int:
     print("                                EvaluarDesempenoCasoUso (CU-07),")
     print("                                EnviarRecordatoriosPlazosCasoUso (CU-08),")
     print("                                GenerarActaFinalCasoUso (CU-09),")
-    print("                                AprobarActaElectronicamenteCasoUso (CU-10)")
+    print("                                AprobarActaElectronicamenteCasoUso (CU-10),")
+    print("                                ConsultarEstadoTramiteCasoUso (CU-11)")
 
     # Demostración del Escenario 1: Postulación exitosa
     print("\n--- Demostración CU-01: Postulación exitosa (Escenario 1) ---")
@@ -897,6 +915,36 @@ def main() -> int:
     eventos_acta = sistema.broker_mensajes.obtener_eventos_acta_emitida()
     print(f"Eventos ActaFinalEmitida publicados: {len(eventos_acta)}")
     print(f"Mensaje Paso 2:       {respuesta_firma_coord.mensaje}")
+
+    eventos = sistema.repositorio_practica.buscar_eventos_por_entidad(f"Practica:{respuesta.practica_id}")
+    print(f"Total eventos en bitácora:     {len(eventos)}")
+
+    # Demostración CU-11: Consulta del estado del trámite en autoservicio (Estudiante titular)
+    print("\n--- Demostración CU-11: Consulta del Estado del Trámite en Autoservicio (Escenario 5) ---")
+    comando_estado_tramite = ConsultarEstadoTramiteComando(
+        actor_id=doc_demo,
+        rol_actor=RolUsuario.ESTUDIANTE.value,
+        ip_origen="192.168.1.100",
+    )
+    respuesta_estado: EstadoTramitePracticaRespuestaDTO = sistema.caso_uso_consultar_estado_tramite(
+        comando_estado_tramite
+    )
+    print(f"Práctica consultada:  {respuesta_estado.practica_id} (Estado: {respuesta_estado.estado_actual})")
+    print(
+        f"Progreso de horas:    {respuesta_estado.horas_acumuladas_aprobadas}/"
+        f"{respuesta_estado.horas_requeridas}h ({respuesta_estado.porcentaje_avance_horas}% de avance)"
+    )
+    print(
+        f"Evaluación visible:   {respuesta_estado.evaluacion.calificacion_visible} "
+        f"(Calificación: {respuesta_estado.evaluacion.calificacion_cuantitativa})"
+    )
+    print(
+        f"Acta Final en firme:  {respuesta_estado.acta_final.acta_en_firme} "
+        f"(Descarga habilitada: {respuesta_estado.acta_final.descarga_habilitada}, "
+        f"Acta: {respuesta_estado.acta_final.numero_acta})"
+    )
+    print(f"Siguiente paso:       {respuesta_estado.siguiente_paso}")
+    print(f"Mensaje:              {respuesta_estado.mensaje}")
 
     eventos = sistema.repositorio_practica.buscar_eventos_por_entidad(f"Practica:{respuesta.practica_id}")
     print(f"Total eventos en bitácora:     {len(eventos)}")
