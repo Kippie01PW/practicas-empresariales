@@ -1,12 +1,12 @@
 """Componente centralizado de autorización basada en roles (RBAC) en la capa de Aplicación.
 
-Traza: CU-01, CU-02, CU-03, CU-04, CU-05, CU-06, CU-07, CU-08, CU-09, RN-01, RN-03, PA-02, ADR-002, ADR-004, ADR-005,
+Traza: CU-01, CU-02, CU-03, CU-04, CU-05, CU-06, CU-07, CU-08, CU-09, CU-10, CU-11, RN-01, RN-03, PA-02, ADR-002, ADR-004, ADR-005,
 Vista Lógica §2, Vista de Desarrollo §2.
 
 Implementa la política de autorización RBAC centralizada y contextual (Context-Based Access Control)
 bajo la regla 'deny-by-default' (ADR-005). Valida tanto el rol del actor autenticado como la
 pertenencia de los recursos según la identidad del usuario (e.g. un estudiante solo puede postularse
-a sí mismo y ver sus datos, RN-01; un supervisor solo puede validar horas y evaluar desempeño de su
+a sí mismo y ver sus datos, RN-01, CU-01, CU-11; un supervisor solo puede validar horas y evaluar desempeño de su
 práctica asignada, RN-01, CU-05, CU-07; un docente asesor solo puede revisar avances de horas y generar
 el acta final de sus practicantes asignados, RN-01, CU-06, CU-09).
 """
@@ -178,6 +178,9 @@ class AutorizadorRBAC:
             RolUsuario.SISTEMA.value,
             RolUsuario.COORDINADOR.value,
             RolUsuario.COORDINADOR_PRACTICAS.value,
+        },
+        "consultar_estado_tramite": {
+            RolUsuario.ESTUDIANTE.value,
         },
     }
 
@@ -846,6 +849,77 @@ class AutorizadorRBAC:
         if rol_normalizado in roles_docente:
             return "aprobar_acta_docente"
         return "aprobar_acta_coordinador"
+
+    def validar_consulta_estado_tramite(
+        self,
+        rol_actor: str,
+        usuario_id: Optional[str] = None,
+        operacion: str = "consultar_estado_tramite",
+    ) -> None:
+        """Valida las autorizaciones específicas para la consulta del estado del trámite en autoservicio (CU-11).
+
+        Traza: CU-11, Escenarios 1, 2, 3, 4, 5, 6, 7, 9, 10 y 11, ADR-004, ADR-005 (política deny-by-default),
+        EAC-03 (0 datos expuestos), RN-01, RN-03.
+
+        Verifica bajo política *deny-by-default* que el actor tenga una identidad institucional
+        válida y posea **exclusivamente** el rol ``Estudiante`` (``RolUsuario.ESTUDIANTE.value``).
+        Cualquier intento de invocación por roles distintos (``DocenteAsesor``, ``Coordinador de prácticas``,
+        ``SupervisorEmpresa``, ``SISTEMA`` o solicitudes sin sesión/rol válido) lanza ``AccesoDenegadoError``.
+
+        Args:
+            rol_actor: Rol presentado por el usuario autenticado.
+            usuario_id: Identificador del usuario autenticado (opcional).
+            operacion: Nombre de la operación evaluada ('consultar_estado_tramite').
+
+        Raises:
+            AccesoDenegadoError: Si el usuario_id es inválido o el rol del actor no es Estudiante.
+        """
+        if usuario_id is not None and not str(usuario_id).strip():
+            raise AccesoDenegadoError(
+                "Acceso denegado: No se ha provisto una identidad de usuario institucional válida.",
+                rol_actor=rol_actor,
+                operacion=operacion,
+                usuario_id=usuario_id,
+            )
+
+        self.validar_rol(
+            rol_actor=rol_actor,
+            roles_permitidos=[RolUsuario.ESTUDIANTE.value],
+            operacion=operacion,
+            usuario_id=usuario_id,
+        )
+
+    def autorizar_comando_consulta_estado_tramite(
+        self,
+        comando: Any,
+    ) -> None:
+        """Valida un comando de consulta de estado del trámite (ConsultarEstadoTramiteComando).
+
+        Verifica bajo política *deny-by-default* que el actor tenga rol exclusivo ``Estudiante``
+        y que, si especifica ``estudiante_id``, coincida con su propio ``actor_id`` (RN-01).
+        """
+        rol = getattr(comando, "rol_actor", None)
+        actor_id = getattr(comando, "actor_id", None)
+        estudiante_id = getattr(comando, "estudiante_id", None)
+
+        self.validar_consulta_estado_tramite(
+            rol_actor=rol,
+            usuario_id=actor_id,
+            operacion="consultar_estado_tramite",
+        )
+
+        if actor_id and estudiante_id:
+            contexto = ContextoUsuario(
+                usuario_id=str(actor_id).strip(),
+                rol=str(rol).strip(),
+                ip_origen=getattr(comando, "ip_origen", "127.0.0.1") or "127.0.0.1",
+            )
+            self.validar_pertenencia_estudiante(
+                contexto=contexto,
+                estudiante=str(estudiante_id).strip(),
+                operacion="consultar_estado_tramite",
+            )
+
 
 
 

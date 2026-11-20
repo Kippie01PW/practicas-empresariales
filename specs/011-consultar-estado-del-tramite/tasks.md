@@ -10,7 +10,7 @@
       Escenarios: 7, 8, 13
       Depende de: ninguna
 
-- [ ] T-03 Configurar regla de autorización RBAC exclusiva para el rol Estudiante y validación de pertenencia contextual en AutorizadorRBAC
+- [X] T-03 Configurar regla de autorización RBAC exclusiva para el rol Estudiante y validación de pertenencia contextual en AutorizadorRBAC
       Archivos: aplicacion/seguridad/autorizador_rbac.py
       Escenarios: 1, 2, 3, 4, 5, 6, 7, 9, 10, 11
       Depende de: ninguna
