@@ -5,7 +5,7 @@
       Escenarios: 1, 2, 3, 4, 5, 6, 13
       Depende de: ninguna
 
-- [ ] T-02 Extender puerto RepositorioPracticaPort con listado de prácticas por docente asesor
+- [X] T-02 Extender puerto RepositorioPracticaPort con listado de prácticas por docente asesor
       Archivos: aplicacion/puertos/repositorio_practica.py
       Escenarios: 6, 14
       Depende de: ninguna

@@ -70,6 +70,18 @@ class RepositorioPracticaPort(Protocol):
         """
         ...
 
+    def listar_por_docente(self, docente_asesor_id: str) -> list[Practica]:
+        """Retorna las prácticas asignadas al docente asesor indicado (CU-06, RN-01).
+
+        Args:
+            docente_asesor_id: Identificador único del docente asesor asignado.
+
+        Returns:
+            Lista de instancias Practica cuyo tutor asignado coincide con el
+            docente_asesor_id proporcionado.
+        """
+        ...
+
     def guardar_intento_validacion(self, intento: IntentoValidacion) -> None:
         """Registra un intento de validación frente al SIA (ADR-001, EAC-02).
 
