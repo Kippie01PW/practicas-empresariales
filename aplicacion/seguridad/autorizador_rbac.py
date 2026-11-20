@@ -187,6 +187,10 @@ class AutorizadorRBAC:
             RolUsuario.COORDINADOR.value,
             RolUsuario.COORDINADOR_PRACTICAS.value,
         },
+        "generar_consolidados_auditoria": {
+            RolUsuario.COORDINADOR.value,
+            RolUsuario.COORDINADOR_PRACTICAS.value,
+        },
     }
 
     # Alias reconocidos para normalización flexible de roles
@@ -1085,5 +1089,48 @@ class AutorizadorRBAC:
                 operacion=operacion,
                 usuario_id=contexto.usuario_id,
             )
+
+    def validar_generacion_consolidados_auditoria(
+        self,
+        rol_actor: str,
+        usuario_id: Optional[str] = None,
+        operacion: str = "generar_consolidados_auditoria",
+    ) -> None:
+        """Valida las autorizaciones para generar y exportar consolidados de auditoría (CU-14).
+
+        Traza: CU-14, Escenario 6, ADR-004, ADR-005 (política deny-by-default),
+        EAC-03 (100% accesos no válidos rechazados, 0 datos expuestos), RN-01, RN-03.
+
+        Verifica bajo política *deny-by-default* que el actor tenga identidad institucional válida
+        (no vacía cuando se suministra) y posea exclusivamente el rol ``Coordinador`` o
+        ``CoordinadorPracticas`` (``"Coordinador de prácticas"``). Cualquier intento por
+        ``Estudiante``, ``DocenteAsesor``, ``SupervisorEmpresa``, ``SISTEMA`` o sin sesión
+        válida lanza ``AccesoDenegadoError``.
+
+        Args:
+            rol_actor: Rol presentado por el usuario autenticado.
+            usuario_id: Identificador del usuario autenticado (opcional).
+            operacion: Nombre de la operación evaluada ('generar_consolidados_auditoria').
+
+        Raises:
+            AccesoDenegadoError: Si el usuario_id es inválido o el rol no es Coordinador de prácticas.
+        """
+        if usuario_id is not None and not str(usuario_id).strip():
+            raise AccesoDenegadoError(
+                "Acceso denegado: No se ha provisto una identidad de usuario institucional válida.",
+                rol_actor=rol_actor,
+                operacion=operacion,
+                usuario_id=usuario_id,
+            )
+
+        self.validar_rol(
+            rol_actor=rol_actor,
+            roles_permitidos=[
+                RolUsuario.COORDINADOR.value,
+                RolUsuario.COORDINADOR_PRACTICAS.value,
+            ],
+            operacion=operacion,
+            usuario_id=usuario_id,
+        )
 
 

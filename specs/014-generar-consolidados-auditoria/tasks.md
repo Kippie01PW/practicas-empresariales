@@ -20,7 +20,7 @@
       Escenarios: 1, 2, 3, 4
       Depende de: T-02
 
-- [ ] T-05 Configurar permiso y método validar_generacion_consolidados_auditoria en AutorizadorRBAC bajo política deny-by-default
+- [X] T-05 Configurar permiso y método validar_generacion_consolidados_auditoria en AutorizadorRBAC bajo política deny-by-default
       Archivos: aplicacion/seguridad/autorizador_rbac.py
       Escenarios: 6
       Depende de: ninguna
