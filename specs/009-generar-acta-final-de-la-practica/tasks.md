@@ -25,7 +25,7 @@
       Escenarios: 1, 5, 6, 10
       Depende de: T-02
 
-- [ ] T-06 Definir puerto ServicioGeneradorActaPdfPort para renderizado desde plantilla HTML/CSS a PDF, sellado SHA-256 y compensación de archivos
+- [X] T-06 Definir puerto ServicioGeneradorActaPdfPort para renderizado desde plantilla HTML/CSS a PDF, sellado SHA-256 y compensación de archivos
       Archivos: aplicacion/puertos/servicio_generador_acta_pdf.py
       Escenarios: 1, 6, 10, 11
       Depende de: T-04
