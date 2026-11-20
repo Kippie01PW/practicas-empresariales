@@ -1,7 +1,7 @@
 """Excepciones y errores de la capa de dominio.
 
-Traza: CU-01, CU-02, CU-03, CU-04, CU-05, CU-07, CU-08, CU-10, ADR-002, ADR-004,
-ADR-005, ADR-006, ADR-007, ADR-008, ADR-010.
+Traza: CU-01, CU-02, CU-03, CU-04, CU-05, CU-07, CU-08, CU-09, CU-10, ADR-002,
+ADR-003, ADR-004, ADR-005, ADR-006, ADR-007, ADR-008, ADR-010.
 
 Define las excepciones del modelo de dominio del sistema de gestión de prácticas
 empresariales. Estas excepciones encapsulan violaciones a invariantes y reglas
@@ -9,8 +9,8 @@ fundamentales de negocio (e.g. prácticas activas simultáneas, falta de reglas
 normativas vigentes, transiciones no permitidas en el ciclo de vida, justificación
 obligatoria de rechazo, cupos de tutores excedidos, registros de horas inválidos,
 credenciales tokenizadas efímeras, validación contextual de horas registradas,
-evaluación de desempeño del practicante y aprobación electrónica secuencial de
-actas finales con verificación de integridad criptográfica SHA-256).
+evaluación de desempeño del practicante, generación de acta final y aprobación
+electrónica secuencial de actas finales con verificación de integridad criptográfica SHA-256).
 """
 
 from __future__ import annotations
@@ -968,6 +968,196 @@ class RecordatorioEnEnfriamientoError(ErrorDominio):
             f"practica_id={self.practica_id!r}, "
             f"tipo_recordatorio={self.tipo_recordatorio!r}, "
             f"cooldown_minutos={self.cooldown_minutos!r})"
+        )
+
+
+# ---------------------------------------------------------------------------
+# CU-09: Excepciones para generación de acta final de la práctica, requisitos
+#        de cierre y fallos de almacenamiento (ADR-003, ADR-007, ADR-008, ADR-010)
+# ---------------------------------------------------------------------------
+
+
+class EstadoPracticaInvalidoParaActaError(TransicionEstadoInvalidaError):
+    """Excepción lanzada cuando se intenta generar el acta final de una práctica en estado distinto a Evaluada.
+
+    Traza: CU-09, Escenario 2 (Rechazo de generación del acta final cuando la práctica no se
+    encuentra en estado Evaluada), RN-02, ADR-010 (Máquina de estados finitos).
+
+    El acta final solo puede generarse cuando la Práctica se encuentra formalmente en estado 'Evaluada'.
+    """
+
+    def __init__(
+        self,
+        estado_actual: str,
+        practica_id: Optional[str] = None,
+        mensaje: Optional[str] = None,
+    ) -> None:
+        self.estado_actual: str = estado_actual
+
+        if mensaje is None:
+            detalle_id = f" '{practica_id}'" if practica_id else ""
+            mensaje = (
+                f"El acta final solo puede generarse cuando la práctica se encuentra formalmente "
+                f"en estado 'Evaluada'. La práctica{detalle_id} se encuentra actualmente en estado "
+                f"'{estado_actual}'."
+            )
+        super().__init__(
+            estado_origen=estado_actual,
+            estado_destino="GeneracionActaFinal",
+            practica_id=practica_id,
+            mensaje=mensaje,
+        )
+
+    def __repr__(self) -> str:
+        return (
+            f"EstadoPracticaInvalidoParaActaError("
+            f"estado_actual={self.estado_actual!r}, "
+            f"practica_id={self.practica_id!r})"
+        )
+
+
+class HorasInsuficientesParaActaError(ErrorDominio):
+    """Excepción lanzada cuando las horas acumuladas aprobadas son inferiores a las horas requeridas.
+
+    Traza: CU-09, Escenario 3 (Rechazo de generación del acta final cuando las horas acumuladas
+    aprobadas son inferiores a las horas requeridas por la regla del programa), RN-02, ADR-007, ADR-010.
+    """
+
+    def __init__(
+        self,
+        horas_acumuladas_aprobadas: int,
+        horas_requeridas: int,
+        practica_id: Optional[str] = None,
+        mensaje: Optional[str] = None,
+    ) -> None:
+        self.horas_acumuladas_aprobadas: int = horas_acumuladas_aprobadas
+        self.horas_requeridas: int = horas_requeridas
+        self.horas_faltantes: int = max(0, horas_requeridas - horas_acumuladas_aprobadas)
+        self.practica_id: Optional[str] = practica_id
+
+        if mensaje is None:
+            detalle_id = f" en la práctica '{practica_id}'" if practica_id else ""
+            mensaje = (
+                f"El estudiante cuenta con {horas_acumuladas_aprobadas} horas acumuladas aprobadas "
+                f"de las {horas_requeridas} horas requeridas{detalle_id}. Faltan "
+                f"{self.horas_faltantes} horas aprobadas para poder emitir el acta final."
+            )
+        super().__init__(mensaje)
+
+    def __repr__(self) -> str:
+        return (
+            f"HorasInsuficientesParaActaError("
+            f"horas_acumuladas_aprobadas={self.horas_acumuladas_aprobadas!r}, "
+            f"horas_requeridas={self.horas_requeridas!r}, "
+            f"horas_faltantes={self.horas_faltantes!r}, "
+            f"practica_id={self.practica_id!r})"
+        )
+
+
+class EvaluacionDesempenoFaltanteParaActaError(ErrorDominio):
+    """Excepción lanzada cuando la práctica carece de una Evaluación de Desempeño registrada.
+
+    Traza: CU-09, Escenario 4 (Rechazo de generación del acta final cuando la práctica carece de
+    evaluación de desempeño registrada), RN-02, ADR-010.
+    """
+
+    def __init__(
+        self,
+        practica_id: Optional[str] = None,
+        mensaje: Optional[str] = None,
+    ) -> None:
+        self.practica_id: Optional[str] = practica_id
+
+        if mensaje is None:
+            detalle_id = f" para la práctica '{practica_id}'" if practica_id else ""
+            mensaje = (
+                f"No es posible generar el acta final{detalle_id}: falta la Evaluación de Desempeño "
+                f"del Supervisor de Empresa."
+            )
+        super().__init__(mensaje)
+
+    def __repr__(self) -> str:
+        return f"EvaluacionDesempenoFaltanteParaActaError(practica_id={self.practica_id!r})"
+
+
+class ActaFinalYaGeneradaError(DecisionPreviaEnFirmeError):
+    """Excepción lanzada cuando se intenta generar nuevamente el acta final de una práctica que ya tiene una.
+
+    Traza: CU-09, Escenario 5 (Intento de generar nuevamente el acta final cuando la práctica ya
+    cuenta con un ActaFinal emitida), ADR-008, ADR-010.
+
+    Garantiza que cada Práctica tenga como máximo una única ActaFinal (relación 0..1),
+    conservando inalterados el archivo PDF, el hash SHA-256 y el registro original.
+    """
+
+    def __init__(
+        self,
+        practica_id: Optional[str] = None,
+        acta_id: Optional[str] = None,
+        numero_acta: Optional[str] = None,
+        mensaje: Optional[str] = None,
+    ) -> None:
+        self.acta_id: Optional[str] = acta_id
+        self.numero_acta: Optional[str] = numero_acta
+
+        if mensaje is None:
+            detalle_id = f" '{practica_id}'" if practica_id else ""
+            detalle_acta = f" (número de acta: '{numero_acta}')" if numero_acta else ""
+            mensaje = (
+                f"La práctica{detalle_id} ya cuenta con un ActaFinal generada{detalle_acta}. "
+                f"Cada práctica puede tener como máximo una única ActaFinal."
+            )
+        super().__init__(
+            estado_actual="Evaluada",
+            practica_id=practica_id,
+            mensaje=mensaje,
+        )
+
+    def __repr__(self) -> str:
+        return (
+            f"ActaFinalYaGeneradaError("
+            f"practica_id={self.practica_id!r}, "
+            f"acta_id={self.acta_id!r}, "
+            f"numero_acta={self.numero_acta!r})"
+        )
+
+
+class ErrorAlmacenamientoActaPdfError(ErrorDominio):
+    """Excepción lanzada ante un fallo de escritura en el repositorio de actas PDF o persistencia del acta.
+
+    Traza: CU-09, Escenario 10 (Preservación de consistencia atómica si falla el almacenamiento
+    del PDF o el registro del acta), DT-02, ADR-003, ADR-008.
+
+    Dispara la reversión o compensación atómica para evitar dejar un registro de ActaFinal sin su
+    archivo PDF correspondiente o un archivo PDF huérfano sin su huella SHA-256 registrada.
+    """
+
+    def __init__(
+        self,
+        practica_id: Optional[str] = None,
+        ruta_archivo_pdf: Optional[str] = None,
+        causa: Optional[str] = None,
+        mensaje: Optional[str] = None,
+    ) -> None:
+        self.practica_id: Optional[str] = practica_id
+        self.ruta_archivo_pdf: Optional[str] = ruta_archivo_pdf
+        self.causa: Optional[str] = causa
+
+        if mensaje is None:
+            detalle_id = f" de la práctica '{practica_id}'" if practica_id else ""
+            detalle_causa = f" Detalle: {causa}" if causa else ""
+            mensaje = (
+                f"Error de almacenamiento al generar o persistir el ActaFinal{detalle_id}. "
+                f"La operación ha sido revertida para preservar la consistencia atómica.{detalle_causa}"
+            )
+        super().__init__(mensaje)
+
+    def __repr__(self) -> str:
+        return (
+            f"ErrorAlmacenamientoActaPdfError("
+            f"practica_id={self.practica_id!r}, "
+            f"ruta_archivo_pdf={self.ruta_archivo_pdf!r}, "
+            f"causa={self.causa!r})"
         )
 
 

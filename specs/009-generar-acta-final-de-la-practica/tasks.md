@@ -1,6 +1,6 @@
 # Tareas: 009 Generar acta final de la práctica
 
-- [ ] T-01 Incorporar excepciones de dominio para generación de acta final, requisitos de cierre y fallos de almacenamiento
+- [X] T-01 Incorporar excepciones de dominio para generación de acta final, requisitos de cierre y fallos de almacenamiento
       Archivos: dominio/errores.py
       Escenarios: 2, 3, 4, 5, 10
       Depende de: ninguna
