@@ -35,7 +35,7 @@
       Escenarios: 1, 2, 3, 6, 8, 11
       Depende de: T-02, T-04
 
-- [ ] T-08 Integrar EnviarRecordatoriosPlazosCasoUso en el punto de composición main.py con demostración CLI
+- [X] T-08 Integrar EnviarRecordatoriosPlazosCasoUso en el punto de composición main.py con demostración CLI
       Archivos: main.py
       Escenarios: 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11
       Depende de: T-06, T-07

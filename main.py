@@ -27,7 +27,12 @@ from __future__ import annotations
 import sys
 from dataclasses import dataclass
 
+from datetime import datetime, timedelta, timezone
+
 from aplicacion.casos_uso.asignar_docente_asesor import AsignarDocenteAsesorCasoUso
+from aplicacion.casos_uso.enviar_recordatorios_plazos import (
+    EnviarRecordatoriosPlazosCasoUso,
+)
 from aplicacion.casos_uso.evaluar_desempeno import EvaluarDesempenoCasoUso
 from aplicacion.casos_uso.evaluar_postulacion import EvaluarPostulacionCasoUso
 from aplicacion.casos_uso.postular_estudiante import PostularEstudianteCasoUso
@@ -58,6 +63,10 @@ from aplicacion.dtos.evaluacion_postulacion_dto import (
 from aplicacion.dtos.postulacion_dto import (
     PostulacionRespuestaDTO,
     PostularEstudianteComando,
+)
+from aplicacion.dtos.recordatorio_plazos_dto import (
+    EjecutarRecordatoriosComando,
+    ResultadoEnvioRecordatoriosDTO,
 )
 from aplicacion.dtos.registro_horas_dto import (
     RegistrarHorasComando,
@@ -104,6 +113,7 @@ class SistemaPracticasEmpresariales:
     caso_uso_validar_horas: ValidarHorasRegistradasCasoUso
     caso_uso_revisar_avances_horas: RevisarAvancesHorasCasoUso
     caso_uso_evaluar_desempeno: EvaluarDesempenoCasoUso
+    caso_uso_enviar_recordatorios: EnviarRecordatoriosPlazosCasoUso
 
     # Componentes de seguridad y autorización
     autorizador_rbac: AutorizadorRBAC
@@ -274,6 +284,19 @@ def inicializar_sistema(
         interceptor_identidad=interceptor_identidad,
     )
 
+    caso_uso_enviar_recordatorios = EnviarRecordatoriosPlazosCasoUso(
+        repositorio_practica=repo_practica,
+        repositorio_registro_horas=repo_registro_horas,
+        repositorio_token_evaluacion=repo_token,
+        repositorio_docente=repo_docente,
+        repositorio_regla=repo_regla,
+        repositorio_evaluacion_desempeno=repo_evaluacion,
+        servicio_correo=servicio_correo,
+        publicador_eventos=broker_mensajes,
+        autorizador_rbac=autorizador_rbac,
+        interceptor_identidad=interceptor_identidad,
+    )
+
     return SistemaPracticasEmpresariales(
         caso_uso_postular=caso_uso_postular,
         caso_uso_reintentar_sia=caso_uso_reintentar_sia,
@@ -283,6 +306,7 @@ def inicializar_sistema(
         caso_uso_validar_horas=caso_uso_validar_horas,
         caso_uso_revisar_avances_horas=caso_uso_revisar_avances_horas,
         caso_uso_evaluar_desempeno=caso_uso_evaluar_desempeno,
+        caso_uso_enviar_recordatorios=caso_uso_enviar_recordatorios,
         autorizador_rbac=autorizador_rbac,
         proveedor_identidad=proveedor_identidad,
         interceptor_identidad=interceptor_identidad,
@@ -324,7 +348,8 @@ def main() -> int:
     print("                                RegistrarHorasCasoUso (CU-04),")
     print("                                ValidarHorasRegistradasCasoUso (CU-05),")
     print("                                RevisarAvancesHorasCasoUso (CU-06),")
-    print("                                EvaluarDesempenoCasoUso (CU-07)")
+    print("                                EvaluarDesempenoCasoUso (CU-07),")
+    print("                                EnviarRecordatoriosPlazosCasoUso (CU-08)")
 
     # Demostración del Escenario 1: Postulación exitosa
     print("\n--- Demostración CU-01: Postulación exitosa (Escenario 1) ---")
@@ -532,6 +557,36 @@ def main() -> int:
     print(f"Nuevo estado práctica:{respuesta_desempeno.estado_practica}")
     print(f"Token consumido:      {respuesta_desempeno.token_consumido}")
     print(f"Mensaje:              {respuesta_desempeno.mensaje}")
+
+    eventos = sistema.repositorio_practica.buscar_eventos_por_entidad(f"Practica:{respuesta.practica_id}")
+    print(f"Total eventos en bitácora:     {len(eventos)}")
+
+    # Demostración CU-08: Envío de recordatorios de plazos (Tarea programada SISTEMA y cooldown 1h)
+    print("\n--- Demostración CU-08: Envío de Recordatorios de Plazos (Escenarios 5 y 7) ---")
+    fecha_futura = datetime.now(timezone.utc) + timedelta(days=5)
+    comando_recordatorios = EjecutarRecordatoriosComando(
+        actor_id="SISTEMA",
+        rol_actor=RolUsuario.SISTEMA.value,
+        ip_origen="127.0.0.1",
+        fecha_referencia=fecha_futura,
+        umbral_dias_calendario=3,
+        cooldown_minutos=60,
+    )
+    resultado_rec: ResultadoEnvioRecordatoriosDTO = sistema.caso_uso_enviar_recordatorios(
+        comando_recordatorios
+    )
+    print(f"Prácticas evaluadas:  {resultado_rec.total_practicas_evaluadas}")
+    print(f"Recordatorios env.:   {resultado_rec.total_recordatorios_enviados}")
+    print(f"Mensaje:              {resultado_rec.mensaje}")
+
+    # Segundo intento inmediato dentro de la ventana de enfriamiento de 1 hora (Escenario 7)
+    resultado_cooldown: ResultadoEnvioRecordatoriosDTO = sistema.caso_uso_enviar_recordatorios(
+        comando_recordatorios
+    )
+    print(
+        f"Intento en cooldown:  enviados={resultado_cooldown.total_recordatorios_enviados}, "
+        f"omitidos_cooldown={resultado_cooldown.total_omitidos_por_cooldown}"
+    )
 
     eventos = sistema.repositorio_practica.buscar_eventos_por_entidad(f"Practica:{respuesta.practica_id}")
     print(f"Total eventos en bitácora:     {len(eventos)}")
