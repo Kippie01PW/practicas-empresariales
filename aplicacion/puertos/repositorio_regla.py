@@ -55,3 +55,40 @@ class RepositorioReglaProgramaPort(Protocol):
             La entidad ReglaPrograma correspondiente si existe, o None si no se encuentra.
         """
         ...
+
+    def actualizar(self, regla: ReglaPrograma) -> None:
+        """Actualiza una regla de programa existente en el almacén de datos (CU-12).
+
+        Args:
+            regla: Instancia de ReglaPrograma con sus atributos o estado de vigencia actualizados.
+        """
+        ...
+
+    def buscar_por_programa_y_version(
+        self, programa_academico: str, version: str
+    ) -> Optional[ReglaPrograma]:
+        """Recupera una regla de programa por su programa académico y versión normativa (CU-12, Escenario 7).
+
+        Args:
+            programa_academico: Nombre o código identificador del programa académico.
+            version: Identificador de la versión de la regla (ej. '2026-1', '2026-2').
+
+        Returns:
+            La entidad ReglaPrograma si existe esa combinación de programa y versión, o None.
+        """
+        ...
+
+    def listar_por_programa(self, programa_academico: str) -> list[ReglaPrograma]:
+        """Lista todas las versiones de reglas registradas para un programa académico (CU-12).
+
+        Args:
+            programa_academico: Nombre o código identificador del programa académico.
+
+        Returns:
+            Lista de entidades ReglaPrograma asociadas al programa académico.
+        """
+        ...
+
+    def listar_todas(self) -> list[ReglaPrograma]:
+        """Retorna todas las reglas de programa registradas en el almacén (CU-12)."""
+        ...

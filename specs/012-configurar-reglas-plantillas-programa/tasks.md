@@ -15,7 +15,7 @@
       Escenarios: 1, 2, 3, 4
       Depende de: ninguna
 
-- [ ] T-04 Ampliar puerto RepositorioReglaProgramaPort con métodos de actualización y consulta por programa y versión
+- [X] T-04 Ampliar puerto RepositorioReglaProgramaPort con métodos de actualización y consulta por programa y versión
       Archivos: aplicacion/puertos/repositorio_regla.py
       Escenarios: 1, 2, 3, 4, 7, 8, 10
       Depende de: T-02
