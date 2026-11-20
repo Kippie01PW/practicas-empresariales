@@ -97,6 +97,62 @@ class DatosTareaValidacionSia:
 
 
 # ---------------------------------------------------------------------------
+# DTO inmutable para evento asíncrono de emisión y firmeza de ActaFinal (CU-10)
+# ---------------------------------------------------------------------------
+
+@dataclass(frozen=True, slots=True)
+class EventoActaFinalEmitida:
+    """Evento inmutable publicado cuando un ActaFinal queda oficialmente en firme.
+
+    Traza: CU-10, Escenario 2 (Aprobación electrónica final exitosa por el Coordinador
+    de prácticas y transición a estado Completada), OB-05, ADR-001, ADR-008,
+    diagramas/secuencias/cu10-aprobar-acta.puml.
+
+    Atributos:
+        - practica_id: Identificador único de la práctica completada.
+        - acta_id: Identificador único del ActaFinal aprobada.
+        - numero_acta: Número oficial consecutivo del acta final.
+        - estudiante_id: Identificador del estudiante titular de la práctica.
+        - ruta_archivo_pdf: Ruta o referencia del documento PDF del acta final.
+        - hash_integridad_sha256: Huella criptográfica SHA-256 de 64 caracteres del PDF.
+        - fecha_emision: Marca temporal de emisión/firmeza del evento.
+    """
+
+    practica_id: str
+    acta_id: str
+    numero_acta: str
+    estudiante_id: str
+    ruta_archivo_pdf: str
+    hash_integridad_sha256: str
+    fecha_emision: Optional[datetime] = None
+
+    def __post_init__(self) -> None:
+        if not self.practica_id or not str(self.practica_id).strip():
+            raise ValueError("El identificador de práctica es obligatorio en EventoActaFinalEmitida.")
+        if not self.acta_id or not str(self.acta_id).strip():
+            raise ValueError("El identificador del acta es obligatorio en EventoActaFinalEmitida.")
+        if not self.numero_acta or not str(self.numero_acta).strip():
+            raise ValueError("El número de acta es obligatorio en EventoActaFinalEmitida.")
+        if not self.estudiante_id or not str(self.estudiante_id).strip():
+            raise ValueError("El identificador del estudiante es obligatorio en EventoActaFinalEmitida.")
+        if not self.ruta_archivo_pdf or not str(self.ruta_archivo_pdf).strip():
+            raise ValueError("La ruta del archivo PDF es obligatoria en EventoActaFinalEmitida.")
+        if not self.hash_integridad_sha256 or not str(self.hash_integridad_sha256).strip():
+            raise ValueError("El hashIntegridadSha256 es obligatorio en EventoActaFinalEmitida.")
+
+        object.__setattr__(self, "practica_id", str(self.practica_id).strip())
+        object.__setattr__(self, "acta_id", str(self.acta_id).strip())
+        object.__setattr__(self, "numero_acta", str(self.numero_acta).strip())
+        object.__setattr__(self, "estudiante_id", str(self.estudiante_id).strip())
+        object.__setattr__(self, "ruta_archivo_pdf", str(self.ruta_archivo_pdf).strip())
+        object.__setattr__(
+            self, "hash_integridad_sha256", str(self.hash_integridad_sha256).strip().lower()
+        )
+        if self.fecha_emision is None:
+            object.__setattr__(self, "fecha_emision", datetime.now())
+
+
+# ---------------------------------------------------------------------------
 # Puerto de Salida: Protocol PublicadorEventosPort
 # ---------------------------------------------------------------------------
 
@@ -105,8 +161,9 @@ class PublicadorEventosPort(Protocol):
     """Puerto de salida hacia el bróker de mensajería para eventos y tareas asíncronas.
 
     Define las operaciones para despachar tareas al worker de integración,
-    enrutar mensajes agotados a la cola de mensajes fallidos (Dead-Letter Queue)
-    y generar alertas operativas hacia soporte técnico (ADR-001, EAC-02).
+    enrutar mensajes agotados a la cola de mensajes fallidos (Dead-Letter Queue),
+    generar alertas operativas hacia soporte técnico (ADR-001, EAC-02) y publicar
+    el evento de emisión en firme de un acta final (CU-10).
     """
 
     def publicar_tarea_validacion_sia(self, tarea: DatosTareaValidacionSia) -> None:
@@ -153,5 +210,20 @@ class PublicadorEventosPort(Protocol):
 
         Raises:
             ErrorPublicacionEvento: Si la emisión de la alerta no pudo ser entregada.
+        """
+        ...
+
+    def publicar_acta_final_emitida(self, evento: EventoActaFinalEmitida) -> None:
+        """Publica el evento asíncrono 'ActaFinalEmitida' al quedar un acta en firme.
+
+        Traza: CU-10, Escenario 2, OB-05, ADR-001, ADR-008,
+        diagramas/secuencias/cu10-aprobar-acta.puml.
+
+        Args:
+            evento: Instancia inmutable de EventoActaFinalEmitida con los datos del
+                acta aprobada y de la práctica completada.
+
+        Raises:
+            ErrorPublicacionEvento: Si ocurre una falla al publicar el evento en el bróker.
         """
         ...

@@ -30,7 +30,7 @@
       Escenarios: 1, 2, 4
       Depende de: ninguna
 
-- [ ] T-07 Ampliar puerto PublicadorEventosPort con DTO EventoActaFinalEmitida y método publicar_acta_final_emitida
+- [X] T-07 Ampliar puerto PublicadorEventosPort con DTO EventoActaFinalEmitida y método publicar_acta_final_emitida
       Archivos: aplicacion/puertos/publicador_eventos.py
       Escenarios: 2
       Depende de: ninguna
