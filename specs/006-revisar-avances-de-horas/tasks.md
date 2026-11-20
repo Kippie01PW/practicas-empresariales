@@ -25,7 +25,7 @@
       Escenarios: 6, 14
       Depende de: T-02
 
-- [ ] T-06 Integrar RevisarAvancesHorasCasoUso en el punto de composición main.py
+- [X] T-06 Integrar RevisarAvancesHorasCasoUso en el punto de composición main.py
       Archivos: main.py
       Escenarios: 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14
       Depende de: T-04, T-05

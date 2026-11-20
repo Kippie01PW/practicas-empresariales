@@ -32,10 +32,17 @@ from aplicacion.casos_uso.evaluar_postulacion import EvaluarPostulacionCasoUso
 from aplicacion.casos_uso.postular_estudiante import PostularEstudianteCasoUso
 from aplicacion.casos_uso.registrar_horas import RegistrarHorasCasoUso
 from aplicacion.casos_uso.reintentar_validacion_sia import ReintentarValidacionSiaCasoUso
+from aplicacion.casos_uso.revisar_avances_horas import RevisarAvancesHorasCasoUso
 from aplicacion.casos_uso.validar_horas_registradas import ValidarHorasRegistradasCasoUso
 from aplicacion.dtos.asignacion_docente_dto import (
     AsignacionDocenteRespuestaDTO,
     AsignarDocenteComando,
+)
+from aplicacion.dtos.avance_horas_dto import (
+    AvanceHorasPracticaRespuestaDTO,
+    ConsultarAvanceHorasComando,
+    ConsultarAvancesDocenteComando,
+    ListadoAvancesDocenteRespuestaDTO,
 )
 from aplicacion.dtos.evaluacion_postulacion_dto import (
     EvaluacionPostulacionRespuestaDTO,
@@ -87,6 +94,7 @@ class SistemaPracticasEmpresariales:
     caso_uso_asignar_docente: AsignarDocenteAsesorCasoUso
     caso_uso_registrar_horas: RegistrarHorasCasoUso
     caso_uso_validar_horas: ValidarHorasRegistradasCasoUso
+    caso_uso_revisar_avances_horas: RevisarAvancesHorasCasoUso
 
     # Componentes de seguridad y autorización
     autorizador_rbac: AutorizadorRBAC
@@ -237,6 +245,13 @@ def inicializar_sistema(
         interceptor_identidad=interceptor_identidad,
     )
 
+    caso_uso_revisar_avances_horas = RevisarAvancesHorasCasoUso(
+        repositorio_practica=repo_practica,
+        repositorio_registro_horas=repo_registro_horas,
+        repositorio_regla=repo_regla,
+        autorizador_rbac=autorizador_rbac,
+    )
+
     return SistemaPracticasEmpresariales(
         caso_uso_postular=caso_uso_postular,
         caso_uso_reintentar_sia=caso_uso_reintentar_sia,
@@ -244,6 +259,7 @@ def inicializar_sistema(
         caso_uso_asignar_docente=caso_uso_asignar_docente,
         caso_uso_registrar_horas=caso_uso_registrar_horas,
         caso_uso_validar_horas=caso_uso_validar_horas,
+        caso_uso_revisar_avances_horas=caso_uso_revisar_avances_horas,
         autorizador_rbac=autorizador_rbac,
         proveedor_identidad=proveedor_identidad,
         interceptor_identidad=interceptor_identidad,
@@ -281,7 +297,8 @@ def main() -> int:
     print("                                EvaluarPostulacionCasoUso (CU-02),")
     print("                                AsignarDocenteAsesorCasoUso (CU-03),")
     print("                                RegistrarHorasCasoUso (CU-04),")
-    print("                                ValidarHorasRegistradasCasoUso (CU-05)")
+    print("                                ValidarHorasRegistradasCasoUso (CU-05),")
+    print("                                RevisarAvancesHorasCasoUso (CU-06)")
 
     # Demostración del Escenario 1: Postulación exitosa
     print("\n--- Demostración CU-01: Postulación exitosa (Escenario 1) ---")
@@ -413,6 +430,40 @@ def main() -> int:
 
         eventos = sistema.repositorio_practica.buscar_eventos_por_entidad(f"Practica:{respuesta.practica_id}")
         print(f"Total eventos en bitácora:     {len(eventos)}")
+
+    # Demostración CU-06: Revisión de avances de horas en modo solo lectura (DocenteAsesor y Estudiante)
+    print("\n--- Demostración CU-06: Revisión de Avances de Horas en Modo Solo Lectura (Escenarios 1 y 6) ---")
+    comando_avance_docente = ConsultarAvanceHorasComando(
+        practica_id=respuesta.practica_id or "",
+        actor_id="doc_001",
+        rol_actor=RolUsuario.DOCENTE_ASESOR.value,
+        ip_origen="192.168.1.60",
+    )
+    respuesta_avance: AvanceHorasPracticaRespuestaDTO = sistema.caso_uso_revisar_avances_horas(
+        comando_avance_docente
+    )
+    print(f"Práctica consultada:  {respuesta_avance.practica_id} (Estado: {respuesta_avance.estado_practica})")
+    print(
+        f"Progreso de horas:    {respuesta_avance.horas_acumuladas_aprobadas}/"
+        f"{respuesta_avance.horas_requeridas}h ({respuesta_avance.porcentaje_avance}% de avance, "
+        f"{respuesta_avance.horas_restantes}h restantes)"
+    )
+    print(f"Reportes desglosados: {len(respuesta_avance.reportes_semanales)} reporte(s) semanal(es)")
+    print(f"Mensaje:              {respuesta_avance.mensaje}")
+
+    comando_listado_docente = ConsultarAvancesDocenteComando(
+        docente_asesor_id="doc_001",
+        actor_id="doc_001",
+        rol_actor=RolUsuario.DOCENTE_ASESOR.value,
+        ip_origen="192.168.1.60",
+    )
+    respuesta_listado: ListadoAvancesDocenteRespuestaDTO = (
+        sistema.caso_uso_revisar_avances_horas.listar_por_docente(comando_listado_docente)
+    )
+    print(f"Consulta consolidada: {respuesta_listado.total_practicas_asignadas} práctica(s) asignada(s) a doc_001")
+
+    eventos = sistema.repositorio_practica.buscar_eventos_por_entidad(f"Practica:{respuesta.practica_id}")
+    print(f"Total eventos en bitácora:     {len(eventos)}")
 
     print("\n[OK] El sistema de gestión de prácticas está listo y operativo.")
     return 0
