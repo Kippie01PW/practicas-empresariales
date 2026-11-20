@@ -65,7 +65,7 @@
       Escenarios: 1, 2, 3, 4, 5, 6, 7, 8, 9
       Depende de: T-09, T-10, T-11, T-12
 
-- [ ] T-14 Validar todos los escenarios de spec.md y generar validacion.md
+- [X] T-14 Validar todos los escenarios de spec.md y generar validacion.md
       Archivos: specs/010-aprobar-acta-electronicamente/validacion.md
       Escenarios: 1, 2, 3, 4, 5, 6, 7, 8, 9
       Depende de: T-13
