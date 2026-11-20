@@ -1,15 +1,16 @@
 """Excepciones y errores de la capa de dominio.
 
-Traza: CU-01, CU-02, CU-03, CU-04, CU-05, CU-07, CU-08, ADR-002, ADR-004, ADR-005,
-ADR-006, ADR-007, ADR-010.
+Traza: CU-01, CU-02, CU-03, CU-04, CU-05, CU-07, CU-08, CU-10, ADR-002, ADR-004,
+ADR-005, ADR-006, ADR-007, ADR-008, ADR-010.
 
 Define las excepciones del modelo de dominio del sistema de gestión de prácticas
 empresariales. Estas excepciones encapsulan violaciones a invariantes y reglas
 fundamentales de negocio (e.g. prácticas activas simultáneas, falta de reglas
 normativas vigentes, transiciones no permitidas en el ciclo de vida, justificación
 obligatoria de rechazo, cupos de tutores excedidos, registros de horas inválidos,
-credenciales tokenizadas efímeras, validación contextual de horas registradas y
-evaluación de desempeño del practicante).
+credenciales tokenizadas efímeras, validación contextual de horas registradas,
+evaluación de desempeño del practicante y aprobación electrónica secuencial de
+actas finales con verificación de integridad criptográfica SHA-256).
 """
 
 from __future__ import annotations
@@ -968,6 +969,235 @@ class RecordatorioEnEnfriamientoError(ErrorDominio):
             f"tipo_recordatorio={self.tipo_recordatorio!r}, "
             f"cooldown_minutos={self.cooldown_minutos!r})"
         )
+
+
+# ---------------------------------------------------------------------------
+# CU-10: Excepciones para aprobación electrónica de acta final, orden
+#        secuencial de firmas e integridad SHA-256 (ADR-008, ADR-010, RN-02)
+# ---------------------------------------------------------------------------
+
+
+class ActaFinalNoEncontradaError(ErrorDominio):
+    """Excepción lanzada cuando la práctica no cuenta con un ActaFinal generada o el acta no existe.
+
+    Traza: CU-10, Escenario 5 (Intento de aprobación electrónica sobre una práctica que no cuenta
+    con ActaFinal generada o no está en estado Evaluada), RN-02, ADR-008, ADR-010.
+    """
+
+    def __init__(
+        self,
+        practica_id: Optional[str] = None,
+        acta_id: Optional[str] = None,
+        mensaje: Optional[str] = None,
+    ) -> None:
+        self.practica_id: Optional[str] = practica_id
+        self.acta_id: Optional[str] = acta_id
+
+        if mensaje is None:
+            if practica_id and acta_id:
+                detalle = f" (práctica '{practica_id}', acta '{acta_id}')"
+            elif practica_id:
+                detalle = f" para la práctica '{practica_id}'"
+            elif acta_id:
+                detalle = f" con identificador '{acta_id}'"
+            else:
+                detalle = ""
+            mensaje = (
+                f"No se encontró un ActaFinal generada{detalle}. "
+                f"Solo se puede aprobar electrónicamente un ActaFinal previamente generada "
+                f"sobre una práctica en estado 'Evaluada'."
+            )
+
+        super().__init__(mensaje)
+
+    def __repr__(self) -> str:
+        return (
+            f"ActaFinalNoEncontradaError("
+            f"practica_id={self.practica_id!r}, "
+            f"acta_id={self.acta_id!r})"
+        )
+
+
+class EstadoPracticaInvalidoParaAprobarActaError(TransicionEstadoInvalidaError):
+    """Excepción lanzada cuando se intenta aprobar un acta sobre una práctica que no está en Evaluada.
+
+    Traza: CU-10, Escenario 5 (Intento de aprobación electrónica sobre una práctica que no cuenta
+    con ActaFinal generada o no está en estado Evaluada), RN-02, ADR-010 (Máquina de estados finitos).
+
+    Solo se puede aprobar electrónicamente un ActaFinal previamente generada sobre una práctica
+    cuyo estadoActual sea formalmente 'Evaluada'.
+    """
+
+    def __init__(
+        self,
+        practica_id: Optional[str] = None,
+        estado_actual: Optional[str] = None,
+        mensaje: Optional[str] = None,
+    ) -> None:
+        self.estado_actual: Optional[str] = estado_actual
+        origen = estado_actual or "Desconocido"
+
+        if mensaje is None:
+            detalle_id = f" '{practica_id}'" if practica_id else ""
+            detalle_estado = f" (estado actual: '{estado_actual}')" if estado_actual else ""
+            mensaje = (
+                f"Solo se puede aprobar electrónicamente un ActaFinal previamente generada sobre "
+                f"una práctica en estado 'Evaluada'. La práctica{detalle_id} no se encuentra en "
+                f"dicho estado{detalle_estado}."
+            )
+
+        super().__init__(
+            estado_origen=origen,
+            estado_destino="Completada",
+            practica_id=practica_id,
+            mensaje=mensaje,
+        )
+
+    def __repr__(self) -> str:
+        return (
+            f"EstadoPracticaInvalidoParaAprobarActaError("
+            f"practica_id={self.practica_id!r}, "
+            f"estado_actual={self.estado_actual!r})"
+        )
+
+
+class FaltaAprobacionDocentePreviaError(ErrorDominio):
+    """Excepción lanzada cuando el Coordinador intenta aprobar un acta sin la firma previa del Docente asesor.
+
+    Traza: CU-10, Escenario 3 (Intento de aprobación por el Coordinador de prácticas sin la firma
+    previa del Docente asesor), RN-02, ADR-010.
+
+    La aprobación electrónica del ActaFinal sigue un orden secuencial estricto:
+    primero debe firmar el DocenteAsesor asignado (aprobadaPorDocente == True) y posteriormente
+    el Coordinador de prácticas (aprobadaPorCoordinador == True).
+    """
+
+    def __init__(
+        self,
+        practica_id: Optional[str] = None,
+        acta_id: Optional[str] = None,
+        docente_asesor_id: Optional[str] = None,
+        mensaje: Optional[str] = None,
+    ) -> None:
+        self.practica_id: Optional[str] = practica_id
+        self.acta_id: Optional[str] = acta_id
+        self.docente_asesor_id: Optional[str] = docente_asesor_id
+
+        if mensaje is None:
+            detalle_acta = f" '{acta_id}'" if acta_id else ""
+            detalle_practica = f" de la práctica '{practica_id}'" if practica_id else ""
+            detalle_docente = f" ('{docente_asesor_id}')" if docente_asesor_id else ""
+            mensaje = (
+                f"Incumplimiento de la secuencia obligatoria de firmas en el ActaFinal"
+                f"{detalle_acta}{detalle_practica}: el DocenteAsesor asignado{detalle_docente} "
+                f"aún no ha firmado electrónicamente el acta."
+            )
+
+        super().__init__(mensaje)
+
+    def __repr__(self) -> str:
+        return (
+            f"FaltaAprobacionDocentePreviaError("
+            f"practica_id={self.practica_id!r}, "
+            f"acta_id={self.acta_id!r}, "
+            f"docente_asesor_id={self.docente_asesor_id!r})"
+        )
+
+
+class ActaYaAprobadaPorActorError(DecisionPreviaEnFirmeError):
+    """Excepción lanzada ante un intento de aprobación electrónica duplicada por el mismo rol o acta en firme.
+
+    Traza: CU-10, Escenario 6 (Intento de aprobación electrónica duplicada por el Docente asesor
+    o por el Coordinador de prácticas), RN-02, ADR-010.
+
+    Una vez asentada en firme la aprobación electrónica del DocenteAsesor o del Coordinador de
+    prácticas, no se permite registrar nuevamente la misma firma.
+    """
+
+    def __init__(
+        self,
+        rol_actor: Optional[str] = None,
+        actor_id: Optional[str] = None,
+        practica_id: Optional[str] = None,
+        acta_id: Optional[str] = None,
+        estado_actual: str = "Evaluada",
+        mensaje: Optional[str] = None,
+    ) -> None:
+        self.rol_actor: Optional[str] = rol_actor
+        self.actor_id: Optional[str] = actor_id
+        self.acta_id: Optional[str] = acta_id
+
+        if mensaje is None:
+            detalle_rol = f" para el rol '{rol_actor}'" if rol_actor else ""
+            detalle_acta = f" sobre el acta '{acta_id}'" if acta_id else " sobre el acta"
+            detalle_practica = f" (práctica '{practica_id}')" if practica_id else ""
+            mensaje = (
+                f"La aprobación electrónica{detalle_rol} ya fue registrada previamente en firme"
+                f"{detalle_acta}{detalle_practica}. No se permite asentar una firma duplicada."
+            )
+
+        super().__init__(
+            estado_actual=estado_actual,
+            practica_id=practica_id,
+            mensaje=mensaje,
+        )
+
+    def __repr__(self) -> str:
+        return (
+            f"ActaYaAprobadaPorActorError("
+            f"rol_actor={self.rol_actor!r}, "
+            f"actor_id={self.actor_id!r}, "
+            f"practica_id={self.practica_id!r}, "
+            f"acta_id={self.acta_id!r})"
+        )
+
+
+class IntegridadActaInvalidaError(ErrorDominio):
+    """Excepción lanzada cuando la huella SHA-256 recalculada del PDF no coincide con el hash del ActaFinal.
+
+    Traza: CU-10, Escenario 4 (Rechazo de aprobación electrónica por discrepancia en la huella
+    de integridad SHA-256 o alteración del archivo PDF), PA-03, EAC-03, ADR-006, ADR-008.
+
+    Antes de asentar cada firma electrónica, el sistema recalcula el hash SHA-256 del binario PDF
+    y comprueba que coincida exactamente con el hashIntegridadSha256 del ActaFinal. Cualquier
+    discrepancia o indisponibilidad del documento bloquea la aprobación y dispara una alerta de
+    seguridad en la bitácora de auditoría.
+    """
+
+    def __init__(
+        self,
+        acta_id: Optional[str] = None,
+        practica_id: Optional[str] = None,
+        hash_esperado: Optional[str] = None,
+        hash_recalculado: Optional[str] = None,
+        mensaje: Optional[str] = None,
+    ) -> None:
+        self.acta_id: Optional[str] = acta_id
+        self.practica_id: Optional[str] = practica_id
+        self.hash_esperado: Optional[str] = hash_esperado
+        self.hash_recalculado: Optional[str] = hash_recalculado
+
+        if mensaje is None:
+            detalle_acta = f" '{acta_id}'" if acta_id else ""
+            detalle_practica = f" (práctica '{practica_id}')" if practica_id else ""
+            mensaje = (
+                f"El documento del ActaFinal{detalle_acta}{detalle_practica} presenta una "
+                f"inconsistencia de integridad criptográfica SHA-256 (la huella recalculada no "
+                f"coincide con el hashIntegridadSha256 registrado o el archivo PDF no está "
+                f"disponible) y no puede ser firmado."
+            )
+
+        super().__init__(mensaje)
+
+    def __repr__(self) -> str:
+        return (
+            f"IntegridadActaInvalidaError("
+            f"acta_id={self.acta_id!r}, "
+            f"practica_id={self.practica_id!r}, "
+            f"hash_esperado={self.hash_esperado!r}, "
+            f"hash_recalculado={self.hash_recalculado!r})"
+        )
+
 
 
 

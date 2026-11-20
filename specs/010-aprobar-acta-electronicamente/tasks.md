@@ -1,6 +1,6 @@
 # Tareas: 010 Aprobar el acta electrónicamente
 
-- [ ] T-01 Incorporar excepciones de dominio para aprobación electrónica de acta final, orden secuencial de firmas e integridad SHA-256
+- [X] T-01 Incorporar excepciones de dominio para aprobación electrónica de acta final, orden secuencial de firmas e integridad SHA-256
       Archivos: dominio/errores.py
       Escenarios: 3, 4, 5, 6
       Depende de: ninguna
