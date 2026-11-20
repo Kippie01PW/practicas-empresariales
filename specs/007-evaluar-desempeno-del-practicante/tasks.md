@@ -30,7 +30,7 @@
       Escenarios: 13, 14, 15
       Depende de: ninguna
 
-- [ ] T-07 Implementar caso de uso EvaluarDesempenoCasoUso con consulta de rúbrica versionada, validación de Magic Link, registro atómico y notificación al docente
+- [X] T-07 Implementar caso de uso EvaluarDesempenoCasoUso con consulta de rúbrica versionada, validación de Magic Link, registro atómico y notificación al docente
       Archivos: aplicacion/casos_uso/evaluar_desempeno.py
       Escenarios: 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16
       Depende de: T-01, T-02, T-03, T-04, T-05, T-06
