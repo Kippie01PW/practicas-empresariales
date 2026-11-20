@@ -1,6 +1,6 @@
 # Tareas: 011 Consultar estado del trámite
 
-- [ ] T-01 Crear DTOs inmutables para comando de consulta y respuesta del estado del trámite en autoservicio
+- [X] T-01 Crear DTOs inmutables para comando de consulta y respuesta del estado del trámite en autoservicio
       Archivos: aplicacion/dtos/estado_tramite_dto.py
       Escenarios: 1, 2, 3, 4, 5, 6, 7, 12
       Depende de: ninguna
