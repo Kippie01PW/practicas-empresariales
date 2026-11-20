@@ -1,6 +1,6 @@
 # Tareas: 015 Migrar prácticas en curso desde Excel
 
-- [ ] T-01 Incorporar excepción de dominio ArchivoMigracionInvalidoError para plantillas ilegibles, vacías o sin columnas obligatorias
+- [X] T-01 Incorporar excepción de dominio ArchivoMigracionInvalidoError para plantillas ilegibles, vacías o sin columnas obligatorias
       Archivos: dominio/errores.py
       Escenarios: 1, 2, 3
       Depende de: ninguna

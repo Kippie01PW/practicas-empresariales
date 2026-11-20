@@ -1639,6 +1639,53 @@ class FiltrosConsolidadoInvalidosError(ErrorDominio):
         )
 
 
+# ---------------------------------------------------------------------------
+# CU-15: Excepciones para migración de prácticas en curso desde Excel
+#        (ADR-002, ADR-009)
+# ---------------------------------------------------------------------------
+
+
+class ArchivoMigracionInvalidoError(ErrorDominio):
+    """Excepción lanzada cuando la plantilla normalizada de migración es ilegible, está vacía o es inválida.
+
+    Traza: CU-15, Escenarios 1, 2 y 3, RT-02, PA-05, ADR-002, ADR-009.
+
+    Se activa cuando el origen de datos de la plantilla normalizada de Excel no existe,
+    no puede leerse, no contiene registros o carece de las columnas obligatorias requeridas
+    para ejecutar la validación o importación.
+    """
+
+    def __init__(
+        self,
+        origen_datos: Optional[str] = None,
+        detalle: Optional[str] = None,
+        mensaje: Optional[str] = None,
+    ) -> None:
+        self.origen_datos: Optional[str] = origen_datos
+        self.detalle: Optional[str] = detalle
+
+        if mensaje is None:
+            detalle_origen = f" '{origen_datos}'" if origen_datos else ""
+            if detalle:
+                mensaje = (
+                    f"La plantilla normalizada de migración{detalle_origen} es inválida: {detalle}"
+                )
+            else:
+                mensaje = (
+                    f"La plantilla normalizada de migración{detalle_origen} es ilegible, "
+                    f"está vacía o carece de las columnas obligatorias requeridas."
+                )
+
+        super().__init__(mensaje)
+
+    def __repr__(self) -> str:
+        return (
+            f"ArchivoMigracionInvalidoError("
+            f"origen_datos={self.origen_datos!r}, "
+            f"detalle={self.detalle!r})"
+        )
+
+
 
 
 
