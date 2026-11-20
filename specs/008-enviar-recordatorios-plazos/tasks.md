@@ -15,7 +15,7 @@
       Escenarios: 1, 2, 3, 4, 5, 6, 7, 8, 10
       Depende de: ninguna
 
-- [ ] T-04 Ampliar puerto RepositorioTokenEvaluacionPort con consulta de tokens emitidos por práctica
+- [X] T-04 Ampliar puerto RepositorioTokenEvaluacionPort con consulta de tokens emitidos por práctica
       Archivos: aplicacion/puertos/repositorio_token_evaluacion.py
       Escenarios: 1, 2, 3, 6, 8, 11
       Depende de: T-02

@@ -62,3 +62,21 @@ class RepositorioTokenEvaluacionPort(Protocol):
             La instancia de TokenEvaluacion si existe; None si no se encuentra.
         """
         ...
+
+    def listar_por_practica(self, practica_id: str) -> list[TokenEvaluacion]:
+        """Recupera todos los TokenEvaluacion emitidos para una práctica empresarial.
+
+        Traza: CU-08, Escenarios 1, 2, 3, 6, 8 y 11, ADR-004.
+        Se utiliza en el flujo de recordatorios de plazos para verificar si una
+        práctica cuenta con un enlace criptográfico efímero vigente, detectar
+        tokens expirados tras 15 días calendario para su invalidación y renovación,
+        y contabilizar las emisiones previas.
+
+        Args:
+            practica_id: Identificador único de la práctica empresarial.
+
+        Returns:
+            Lista de instancias TokenEvaluacion asociadas a la práctica,
+            ordenadas cronológicamente por fecha de emisión.
+        """
+        ...
