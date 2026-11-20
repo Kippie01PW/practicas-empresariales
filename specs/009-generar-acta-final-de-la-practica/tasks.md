@@ -5,7 +5,7 @@
       Escenarios: 2, 3, 4, 5, 10
       Depende de: ninguna
 
-- [ ] T-02 Crear entidad de dominio ActaFinal con validación de número de acta consecutivo, ruta PDF, hash SHA-256 y estado de firmas
+- [X] T-02 Crear entidad de dominio ActaFinal con validación de número de acta consecutivo, ruta PDF, hash SHA-256 y estado de firmas
       Archivos: dominio/modelos/acta_final.py
       Escenarios: 1, 5, 6, 11
       Depende de: T-01

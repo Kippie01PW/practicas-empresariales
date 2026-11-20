@@ -1,11 +1,12 @@
 """Entidad de dominio ActaFinal.
 
-Traza: CU-10, EAC-03, PA-03, RN-01, RN-02, RN-03, ADR-002, ADR-006, ADR-008, ADR-010,
-Vista Lógica §2 (01-logica.puml).
+Traza: CU-09, CU-10, EAC-01, EAC-03, OB-01, OB-05, PA-03, RN-01, RN-02, RN-03,
+ADR-002, ADR-006, ADR-007, ADR-008, ADR-010, Vista Lógica §2 (01-logica.puml).
 
-Modela el documento oficial de culminación de la práctica empresarial renderizado
-en PDF con firmas electrónicas secuenciales (DocenteAsesor -> Coordinador de prácticas)
-y preservación inmutable garantizada mediante sellado criptográfico SHA-256.
+Modela el documento oficial e inmutable de culminación de la práctica empresarial,
+renderizado en PDF a partir de la plantilla configurada en la ReglaPrograma vinculada,
+sellado con una huella criptográfica SHA-256 de 64 caracteres hexadecimales y sujeto
+a la aprobación electrónica secuencial (DocenteAsesor -> Coordinador de prácticas).
 """
 
 from __future__ import annotations
@@ -26,10 +27,10 @@ from dominio.errores import (
 class ActaFinal:
     """Entidad de dominio que representa el acta final de una práctica empresarial.
 
-    Atributos del diagrama UML (01-logica.puml) y del plan técnico (plan.md):
+    Atributos del diagrama UML (01-logica.puml) y de los planes técnicos (CU-09 y CU-10):
         - id: Identificador único del acta final.
         - practica_id: Identificador de la práctica empresarial vinculada (relación 1 a 0..1).
-        - numero_acta: Número oficial consecutivo o código institucional del acta.
+        - numero_acta: Número oficial consecutivo anual (formato "ACTA-<AÑO>-<NNNN>", ej. "ACTA-2026-0001").
         - fecha_emision: Marca temporal de generación inicial del acta en PDF.
         - ruta_archivo_pdf: Ruta o identificador en el volumen de almacenamiento de actas PDF.
         - hash_integridad_sha256: Huella criptográfica SHA-256 (64 caracteres hexadecimales) del binario PDF.
@@ -41,6 +42,7 @@ class ActaFinal:
         - fecha_aprobacion_coordinador: Marca temporal de la aprobación electrónica del Coordinador.
     """
 
+    _PATRON_NUMERO_ACTA = re.compile(r"^ACTA-\d{4}-\d{4,}$")
     _PATRON_SHA256 = re.compile(r"^[0-9a-fA-F]{64}$")
 
     __slots__ = (
@@ -74,38 +76,45 @@ class ActaFinal:
         fecha_aprobacion_coordinador: Optional[datetime] = None,
         id: Optional[str] = None,
     ) -> None:
-        if not practica_id or not practica_id.strip():
+        if not practica_id or not str(practica_id).strip():
             raise ValueError("El identificador de la práctica es obligatorio para el ActaFinal.")
-        if not numero_acta or not numero_acta.strip():
+        if not numero_acta or not str(numero_acta).strip():
             raise ValueError("El número de acta es obligatorio para el ActaFinal.")
-        if not ruta_archivo_pdf or not ruta_archivo_pdf.strip():
+        if not ruta_archivo_pdf or not str(ruta_archivo_pdf).strip():
             raise ValueError("La ruta del archivo PDF es obligatoria para el ActaFinal.")
+
+        numero_limpio = str(numero_acta).strip()
+        if not self._PATRON_NUMERO_ACTA.match(numero_limpio):
+            raise ValueError(
+                f"El número de acta '{numero_limpio}' no cumple el formato consecutivo anual "
+                f"'ACTA-<AÑO>-<NNNN>' (ej. 'ACTA-2026-0001')."
+            )
 
         hash_validado = self._validar_formato_sha256(hash_integridad_sha256)
 
         if bool(aprobada_por_coordinador) and not bool(aprobada_por_docente):
             raise FaltaAprobacionDocentePreviaError(
-                practica_id=practica_id.strip(),
-                acta_id=id.strip() if id and id.strip() else None,
+                practica_id=str(practica_id).strip(),
+                acta_id=str(id).strip() if id and str(id).strip() else None,
             )
 
-        self._id: str = id.strip() if id and id.strip() else str(uuid.uuid4())
-        self._practica_id: str = practica_id.strip()
-        self._numero_acta: str = numero_acta.strip()
+        self._id: str = str(id).strip() if id and str(id).strip() else str(uuid.uuid4())
+        self._practica_id: str = str(practica_id).strip()
+        self._numero_acta: str = numero_limpio
         self._fecha_emision: datetime = fecha_emision or datetime.now()
-        self._ruta_archivo_pdf: str = ruta_archivo_pdf.strip()
+        self._ruta_archivo_pdf: str = str(ruta_archivo_pdf).strip()
         self._hash_integridad_sha256: str = hash_validado
         self._aprobada_por_docente: bool = bool(aprobada_por_docente)
         self._aprobada_por_coordinador: bool = bool(aprobada_por_coordinador)
         self._docente_aprobador_id: Optional[str] = (
-            docente_aprobador_id.strip()
-            if docente_aprobador_id and docente_aprobador_id.strip()
+            str(docente_aprobador_id).strip()
+            if docente_aprobador_id and str(docente_aprobador_id).strip()
             else None
         )
         self._fecha_aprobacion_docente: Optional[datetime] = fecha_aprobacion_docente
         self._coordinador_aprobador_id: Optional[str] = (
-            coordinador_aprobador_id.strip()
-            if coordinador_aprobador_id and coordinador_aprobador_id.strip()
+            str(coordinador_aprobador_id).strip()
+            if coordinador_aprobador_id and str(coordinador_aprobador_id).strip()
             else None
         )
         self._fecha_aprobacion_coordinador: Optional[datetime] = fecha_aprobacion_coordinador
@@ -124,12 +133,22 @@ class ActaFinal:
             )
         return limpio
 
-    def verificar_integridad_hash(self, hash_recalculado: str) -> None:
+    def coincide_hash(self, hash_calculado: Optional[str]) -> bool:
+        """Compara en tiempo constante si hash_calculado coincide con hash_integridad_sha256."""
+        if not isinstance(hash_calculado, str) or not hash_calculado.strip():
+            return False
+        candidato = hash_calculado.strip().lower()
+        if not self._PATRON_SHA256.match(candidato):
+            return False
+        return hmac.compare_digest(candidato, self._hash_integridad_sha256)
+
+    def verificar_integridad_hash(self, hash_recalculado: str) -> bool:
         """Compara de forma segura el hash SHA-256 recalculado del PDF contra el registrado.
 
-        Traza: CU-10, Escenarios 1, 2 y 4 (Verificación de huella SHA-256 del binario PDF
+        Traza: CU-09 y CU-10, Escenarios 1, 2 y 4 (Verificación de huella SHA-256 del binario PDF
         antes de asentar firmas electrónicas), PA-03, ADR-008.
 
+        Retorna True cuando el hash recalculado coincide exactamente con el registrado.
         Raises:
             IntegridadActaInvalidaError: Si el hash recalculado está vacío, tiene formato inválido
                 o no coincide exactamente con el hashIntegridadSha256 registrado.
@@ -150,6 +169,7 @@ class ActaFinal:
                 hash_esperado=self._hash_integridad_sha256,
                 hash_recalculado=candidato,
             )
+        return True
 
     # -- Operaciones de aprobación electrónica secuencial (RN-02, ADR-010) -
 
@@ -167,20 +187,20 @@ class ActaFinal:
             ValueError: Si el identificador del docente está vacío.
             ActaYaAprobadaPorActorError: Si la aprobación del DocenteAsesor ya fue asentada previamente.
         """
-        if not docente_id or not docente_id.strip():
+        if not docente_id or not str(docente_id).strip():
             raise ValueError("El identificador del DocenteAsesor es obligatorio para aprobar el acta.")
 
         if self._aprobada_por_docente:
             raise ActaYaAprobadaPorActorError(
                 rol_actor="DocenteAsesor",
-                actor_id=docente_id.strip(),
+                actor_id=str(docente_id).strip(),
                 practica_id=self._practica_id,
                 acta_id=self._id,
                 estado_actual="Completada" if self.esta_en_firme else "Evaluada",
             )
 
         self._aprobada_por_docente = True
-        self._docente_aprobador_id = docente_id.strip()
+        self._docente_aprobador_id = str(docente_id).strip()
         self._fecha_aprobacion_docente = fecha_aprobacion or datetime.now()
 
     def aprobar_por_coordinador(
@@ -199,7 +219,7 @@ class ActaFinal:
             ActaYaAprobadaPorActorError: Si la aprobación del Coordinador ya fue asentada previamente.
             FaltaAprobacionDocentePreviaError: Si el DocenteAsesor aún no ha firmado electrónicamente el acta.
         """
-        if not coordinador_id or not coordinador_id.strip():
+        if not coordinador_id or not str(coordinador_id).strip():
             raise ValueError(
                 "El identificador del Coordinador de prácticas es obligatorio para aprobar el acta."
             )
@@ -207,7 +227,7 @@ class ActaFinal:
         if self._aprobada_por_coordinador:
             raise ActaYaAprobadaPorActorError(
                 rol_actor="Coordinador de prácticas",
-                actor_id=coordinador_id.strip(),
+                actor_id=str(coordinador_id).strip(),
                 practica_id=self._practica_id,
                 acta_id=self._id,
                 estado_actual="Completada",
@@ -221,7 +241,7 @@ class ActaFinal:
             )
 
         self._aprobada_por_coordinador = True
-        self._coordinador_aprobador_id = coordinador_id.strip()
+        self._coordinador_aprobador_id = str(coordinador_id).strip()
         self._fecha_aprobacion_coordinador = fecha_aprobacion or datetime.now()
 
     # -- Propiedades de lectura --------------------------------------------
@@ -276,6 +296,10 @@ class ActaFinal:
 
     @property
     def esta_en_firme(self) -> bool:
+        """Retorna True únicamente cuando tanto el DocenteAsesor como el Coordinador han aprobado el acta."""
+        return self._aprobada_por_docente and self._aprobada_por_coordinador
+
+    def esta_completamente_aprobada(self) -> bool:
         """Retorna True únicamente cuando tanto el DocenteAsesor como el Coordinador han aprobado el acta."""
         return self._aprobada_por_docente and self._aprobada_por_coordinador
 
