@@ -792,6 +792,61 @@ class AutorizadorRBAC:
             operacion="generar_acta",
         )
 
+    def validar_aprobacion_acta(
+        self,
+        rol_actor: str,
+        usuario_id: Optional[str] = None,
+    ) -> str:
+        """Valida las autorizaciones específicas para la aprobación electrónica de acta final (CU-10).
+
+        Traza: CU-10, Escenarios 1, 2, 7, 8 y 9, ADR-004, ADR-005 (política deny-by-default),
+        EAC-03 (0 datos expuestos), RN-01, RN-03.
+
+        Verifica bajo política *deny-by-default* que el rol del actor pertenezca
+        exclusivamente a DocenteAsesor / Docente (Paso 1 -> 'aprobar_acta_docente')
+        o a Coordinador de prácticas / Coordinador (Paso 2 -> 'aprobar_acta_coordinador').
+        Cualquier intento por Estudiante, SupervisorEmpresa, rol vacío o desconocido
+        lanza AccesoDenegadoError.
+
+        Args:
+            rol_actor: Rol presentado por el usuario autenticado.
+            usuario_id: Identificador del usuario autenticado (opcional).
+
+        Returns:
+            Nombre de la operación autorizada ('aprobar_acta_docente' o 'aprobar_acta_coordinador').
+
+        Raises:
+            AccesoDenegadoError: Si el usuario_id es inválido o el rol no es DocenteAsesor ni Coordinador.
+        """
+        if usuario_id is not None and not str(usuario_id).strip():
+            raise AccesoDenegadoError(
+                "Acceso denegado: No se ha provisto una identidad de usuario institucional válida.",
+                rol_actor=rol_actor,
+                operacion="aprobar_acta",
+                usuario_id=usuario_id,
+            )
+
+        roles_docente = {
+            RolUsuario.DOCENTE.value,
+            RolUsuario.DOCENTE_ASESOR.value,
+        }
+        roles_coordinador = {
+            RolUsuario.COORDINADOR.value,
+            RolUsuario.COORDINADOR_PRACTICAS.value,
+        }
+
+        self.validar_rol(
+            rol_actor=rol_actor,
+            roles_permitidos=roles_docente | roles_coordinador,
+            operacion="aprobar_acta",
+            usuario_id=usuario_id,
+        )
+
+        rol_normalizado = self.normalizar_rol(rol_actor)
+        if rol_normalizado in roles_docente:
+            return "aprobar_acta_docente"
+        return "aprobar_acta_coordinador"
+
 
 
 

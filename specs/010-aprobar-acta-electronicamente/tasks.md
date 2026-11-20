@@ -35,7 +35,7 @@
       Escenarios: 2
       Depende de: ninguna
 
-- [ ] T-08 Configurar método validar_aprobacion_acta en AutorizadorRBAC bajo política deny-by-default para DocenteAsesor y Coordinador de prácticas
+- [X] T-08 Configurar método validar_aprobacion_acta en AutorizadorRBAC bajo política deny-by-default para DocenteAsesor y Coordinador de prácticas
       Archivos: aplicacion/seguridad/autorizador_rbac.py
       Escenarios: 7, 8, 9
       Depende de: ninguna
