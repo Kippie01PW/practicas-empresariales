@@ -35,7 +35,7 @@
       Escenarios: 1, 2, 3, 4
       Depende de: T-02, T-04
 
-- [ ] T-08 Integrar GenerarConsolidadosAuditoriaCasoUso en el punto de composición main.py
+- [X] T-08 Integrar GenerarConsolidadosAuditoriaCasoUso en el punto de composición main.py
       Archivos: main.py
       Escenarios: 1, 2, 3, 4, 5, 6
       Depende de: T-06, T-07

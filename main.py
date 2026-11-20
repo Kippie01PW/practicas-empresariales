@@ -43,6 +43,9 @@ from aplicacion.casos_uso.enviar_recordatorios_plazos import (
 from aplicacion.casos_uso.evaluar_desempeno import EvaluarDesempenoCasoUso
 from aplicacion.casos_uso.evaluar_postulacion import EvaluarPostulacionCasoUso
 from aplicacion.casos_uso.generar_acta_final import GenerarActaFinalCasoUso
+from aplicacion.casos_uso.generar_consolidados_auditoria import (
+    GenerarConsolidadosAuditoriaCasoUso,
+)
 from aplicacion.casos_uso.monitorear_practicas import MonitorearPracticasCasoUso
 from aplicacion.casos_uso.postular_estudiante import PostularEstudianteCasoUso
 from aplicacion.casos_uso.registrar_horas import RegistrarHorasCasoUso
@@ -68,6 +71,10 @@ from aplicacion.dtos.avance_horas_dto import (
     ConsultarAvanceHorasComando,
     ConsultarAvancesDocenteComando,
     ListadoAvancesDocenteRespuestaDTO,
+)
+from aplicacion.dtos.consolidado_auditoria_dto import (
+    ConsolidadoAuditoriaRespuestaDTO,
+    GenerarConsolidadoAuditoriaComando,
 )
 from aplicacion.dtos.estado_tramite_dto import (
     ConsultarEstadoTramiteComando,
@@ -358,6 +365,7 @@ class SistemaPracticasEmpresariales:
     caso_uso_consultar_estado_tramite: ConsultarEstadoTramiteCasoUso
     caso_uso_configurar_reglas: ConfigurarReglasProgramaCasoUso
     caso_uso_monitorear_practicas: MonitorearPracticasCasoUso
+    caso_uso_generar_consolidados: GenerarConsolidadosAuditoriaCasoUso
 
     # Componentes de seguridad y autorización
     autorizador_rbac: AutorizadorRBAC
@@ -594,6 +602,16 @@ def inicializar_sistema(
         autorizador_rbac=autorizador_rbac,
     )
 
+    caso_uso_generar_consolidados = GenerarConsolidadosAuditoriaCasoUso(
+        repositorio_practica=repo_practica,
+        repositorio_acta_final=repo_acta,
+        repositorio_regla=repo_regla,
+        repositorio_docente=repo_docente,
+        repositorio_evaluacion=repo_evaluacion,
+        servicio_pdf=servicio_pdf,
+        autorizador_rbac=autorizador_rbac,
+    )
+
     return SistemaPracticasEmpresariales(
         caso_uso_postular=caso_uso_postular,
         caso_uso_reintentar_sia=caso_uso_reintentar_sia,
@@ -609,6 +627,7 @@ def inicializar_sistema(
         caso_uso_consultar_estado_tramite=caso_uso_consultar_estado_tramite,
         caso_uso_configurar_reglas=caso_uso_configurar_reglas,
         caso_uso_monitorear_practicas=caso_uso_monitorear_practicas,
+        caso_uso_generar_consolidados=caso_uso_generar_consolidados,
         autorizador_rbac=autorizador_rbac,
         proveedor_identidad=proveedor_identidad,
         interceptor_identidad=interceptor_identidad,
@@ -1142,6 +1161,28 @@ def main() -> int:
             f"({detalle_monitoreo_dto.porcentaje_avance_horas}%) | "
             f"ActaEnFirme={detalle_monitoreo_dto.acta_en_firme}"
         )
+
+    print("\n--- Demo rápida CU-14: Generar consolidado para auditoría ---")
+    ahora_demo = datetime.now()
+    periodo_demo = f"{ahora_demo.year}-{1 if ahora_demo.month <= 6 else 2}"
+    comando_consolidado = GenerarConsolidadoAuditoriaComando(
+        programa_academico="Ingeniería de Sistemas",
+        periodo=periodo_demo,
+        actor_id="COORD-001",
+        rol_actor="Coordinador de prácticas",
+        ip_origen="192.168.1.50",
+    )
+    respuesta_consolidado: ConsolidadoAuditoriaRespuestaDTO = (
+        sistema.caso_uso_generar_consolidados(comando_consolidado)
+    )
+    print(
+        f"Consolidado PDF:      {respuesta_consolidado.nombre_archivo_pdf} | "
+        f"Total={respuesta_consolidado.total_practicas} | "
+        f"Completadas={respuesta_consolidado.total_completadas} | "
+        f"ActasEnFirme={respuesta_consolidado.total_con_acta_en_firme}"
+    )
+    print(f"SHA-256 PDF:          {respuesta_consolidado.hash_sha256_pdf}")
+    print(f"Mensaje consolidado:  {respuesta_consolidado.mensaje}")
 
     print("\n[OK] El sistema de gestión de prácticas está listo y operativo.")
     return 0
