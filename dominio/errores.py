@@ -1,6 +1,6 @@
 """Excepciones y errores de la capa de dominio.
 
-Traza: CU-01, CU-02, CU-03, CU-04, CU-05, CU-07, CU-08, CU-09, CU-10, ADR-002,
+Traza: CU-01, CU-02, CU-03, CU-04, CU-05, CU-07, CU-08, CU-09, CU-10, CU-12, ADR-002,
 ADR-003, ADR-004, ADR-005, ADR-006, ADR-007, ADR-008, ADR-010.
 
 Define las excepciones del modelo de dominio del sistema de gestión de prácticas
@@ -9,13 +9,14 @@ fundamentales de negocio (e.g. prácticas activas simultáneas, falta de reglas
 normativas vigentes, transiciones no permitidas en el ciclo de vida, justificación
 obligatoria de rechazo, cupos de tutores excedidos, registros de horas inválidos,
 credenciales tokenizadas efímeras, validación contextual de horas registradas,
-evaluación de desempeño del practicante, generación de acta final y aprobación
-electrónica secuencial de actas finales con verificación de integridad criptográfica SHA-256).
+evaluación de desempeño del practicante, generación de acta final, aprobación
+electrónica secuencial de actas finales con verificación de integridad criptográfica SHA-256
+y configuración declarativa de reglas y plantillas versionadas por programa académico).
 """
 
 from __future__ import annotations
 
-from typing import Optional
+from typing import Any, Optional
 
 
 class ErrorDominio(Exception):
@@ -1387,6 +1388,207 @@ class IntegridadActaInvalidaError(ErrorDominio):
             f"hash_esperado={self.hash_esperado!r}, "
             f"hash_recalculado={self.hash_recalculado!r})"
         )
+
+
+# ---------------------------------------------------------------------------
+# CU-12: Excepciones para configuración declarativa de reglas y plantillas
+#        versionadas por programa académico (ADR-007, EAC-01, RN-02)
+# ---------------------------------------------------------------------------
+
+
+class ReglaProgramaNoEncontradaError(ErrorDominio):
+    """Excepción lanzada cuando no existe una ReglaPrograma con el identificador solicitado.
+
+    Traza: CU-12, ADR-002, ADR-007.
+    """
+
+    def __init__(
+        self,
+        regla_id: str,
+        mensaje: Optional[str] = None,
+    ) -> None:
+        self.regla_id: str = regla_id
+
+        if mensaje is None:
+            mensaje = (
+                f"No se encontró ninguna ReglaPrograma registrada con el identificador "
+                f"'{regla_id}'."
+            )
+
+        super().__init__(mensaje)
+
+    def __repr__(self) -> str:
+        return f"ReglaProgramaNoEncontradaError(regla_id={self.regla_id!r})"
+
+
+class DatosReglaProgramaInvalidosError(ErrorDominio):
+    """Excepción lanzada cuando los datos obligatorios de la regla son vacíos o horasRequeridas no es válido.
+
+    Traza: CU-12, Escenario 5 (Rechazo de configuración de regla de programa por datos obligatorios
+    vacíos o cantidad de horas requeridas no válida), ADR-007.
+
+    Los atributos programaAcademico, version y plantillaActa no pueden estar vacíos, y horasRequeridas
+    debe ser un número entero positivo mayor a 0.
+    """
+
+    def __init__(
+        self,
+        campo: Optional[str] = None,
+        valor: Any = None,
+        mensaje: Optional[str] = None,
+    ) -> None:
+        self.campo: Optional[str] = campo
+        self.valor: Any = valor
+
+        if mensaje is None:
+            if campo == "horas_requeridas" or campo == "horasRequeridas":
+                mensaje = (
+                    f"El campo 'horasRequeridas' debe ser un número entero positivo mayor a 0 "
+                    f"(recibido: {valor!r})."
+                )
+            elif campo:
+                mensaje = (
+                    f"El campo obligatorio '{campo}' de la ReglaPrograma no puede estar vacío."
+                )
+            else:
+                mensaje = (
+                    "Los datos de configuración de la ReglaPrograma son inválidos: "
+                    "programaAcademico, version y plantillaActa son obligatorios y "
+                    "horasRequeridas debe ser un número entero positivo mayor a 0."
+                )
+
+        super().__init__(mensaje)
+
+    def __repr__(self) -> str:
+        return (
+            f"DatosReglaProgramaInvalidosError("
+            f"campo={self.campo!r}, "
+            f"valor={self.valor!r})"
+        )
+
+
+class CriteriosRubricaInvalidosError(ErrorDominio):
+    """Excepción lanzada cuando los criteriosRubrica de una regla son vacíos o inválidos.
+
+    Traza: CU-12, Escenario 6 (Rechazo de configuración de regla de programa por criterios de
+    rúbrica vacíos o inválidos), EAC-01, ADR-007.
+
+    Los criteriosRubrica deben contener al menos un criterio válido, ya sea como una lista simple
+    no vacía de nombres de criterios sin peso o como un diccionario no vacío con ponderaciones
+    numéricas mayores a 0.
+    """
+
+    def __init__(
+        self,
+        detalle: Optional[str] = None,
+        mensaje: Optional[str] = None,
+    ) -> None:
+        self.detalle: Optional[str] = detalle
+
+        if mensaje is None:
+            sufijo = f" ({detalle})" if detalle else ""
+            mensaje = (
+                f"Los criteriosRubrica deben contener al menos un criterio válido (como lista "
+                f"simple de criterios sin peso o como diccionario con ponderaciones válidas "
+                f"mayores a 0){sufijo}."
+            )
+
+        super().__init__(mensaje)
+
+    def __repr__(self) -> str:
+        return f"CriteriosRubricaInvalidosError(detalle={self.detalle!r})"
+
+
+class VersionReglaProgramaDuplicadaError(ErrorDominio):
+    """Excepción lanzada cuando ya existe una versión idéntica registrada para el mismo programa académico.
+
+    Traza: CU-12, Escenario 7 (Rechazo de creación de regla de programa por identificador de
+    versión duplicado para el mismo programa académico), ADR-007.
+    """
+
+    def __init__(
+        self,
+        programa_academico: str,
+        version: str,
+        regla_existente_id: Optional[str] = None,
+        mensaje: Optional[str] = None,
+    ) -> None:
+        self.programa_academico: str = programa_academico
+        self.version: str = version
+        self.regla_existente_id: Optional[str] = regla_existente_id
+
+        if mensaje is None:
+            detalle_id = (
+                f" (regla ID: '{regla_existente_id}')" if regla_existente_id else ""
+            )
+            mensaje = (
+                f"Ya existe una versión '{version}' para el programa académico "
+                f"'{programa_academico}'{detalle_id}. No se permite duplicidad de versión "
+                f"dentro del mismo programa académico."
+            )
+
+        super().__init__(mensaje)
+
+    def __repr__(self) -> str:
+        return (
+            f"VersionReglaProgramaDuplicadaError("
+            f"programa_academico={self.programa_academico!r}, "
+            f"version={self.version!r}, "
+            f"regla_existente_id={self.regla_existente_id!r})"
+        )
+
+
+class ReglaProgramaInmutableError(ErrorDominio):
+    """Excepción lanzada al intentar editar o eliminar una regla en estado Activa o Inactiva (histórica).
+
+    Traza: CU-12, Escenario 8 (Intento de edición o eliminación directa de una regla de programa
+    activa o histórica vinculada a prácticas existentes), EAC-01, OB-05, ADR-007.
+
+    Solo se permite editar los atributos normativos de una ReglaPrograma mientras permanezca en
+    estadoVigencia 'Borrador'. Una regla en estado 'Activa' o 'Inactiva' es inmutable y cualquier
+    cambio normativo debe registrarse como una nueva versión en estado 'Borrador'.
+    """
+
+    def __init__(
+        self,
+        regla_id: Optional[str] = None,
+        version: Optional[str] = None,
+        estado_vigencia: Optional[str] = None,
+        operacion: str = "modificar",
+        mensaje: Optional[str] = None,
+    ) -> None:
+        self.regla_id: Optional[str] = regla_id
+        self.version: Optional[str] = version
+        self.estado_vigencia: Optional[str] = estado_vigencia
+        self.operacion: str = operacion
+
+        if mensaje is None:
+            detalle_regla = f" '{regla_id}'" if regla_id else ""
+            detalle_version = f" (versión '{version}')" if version else ""
+            detalle_estado = (
+                f" en estado '{estado_vigencia}'"
+                if estado_vigencia
+                else " en estado 'Activa' o 'Inactiva'"
+            )
+            mensaje = (
+                f"No se permite {operacion} directamente la ReglaPrograma{detalle_regla}"
+                f"{detalle_version}{detalle_estado}: una regla en estado 'Activa' o 'Inactiva' "
+                f"es inmutable para garantizar un 0% de alteración en las prácticas y actas "
+                f"asociadas. Solo se permite editar mientras permanezca en estado 'Borrador'; "
+                f"cualquier cambio normativo debe registrarse como una nueva versión en estado 'Borrador'."
+            )
+
+        super().__init__(mensaje)
+
+    def __repr__(self) -> str:
+        return (
+            f"ReglaProgramaInmutableError("
+            f"regla_id={self.regla_id!r}, "
+            f"version={self.version!r}, "
+            f"estado_vigencia={self.estado_vigencia!r}, "
+            f"operacion={self.operacion!r})"
+        )
+
 
 
 

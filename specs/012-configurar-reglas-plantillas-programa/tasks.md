@@ -1,6 +1,6 @@
 # Tareas: 012 Configurar reglas y plantillas por programa
 
-- [ ] T-01 Incorporar excepciones de dominio para validación normativa, criterios de rúbrica, duplicidad de versión e inmutabilidad de reglas de programa
+- [X] T-01 Incorporar excepciones de dominio para validación normativa, criterios de rúbrica, duplicidad de versión e inmutabilidad de reglas de programa
       Archivos: dominio/errores.py
       Escenarios: 5, 6, 7, 8
       Depende de: ninguna
