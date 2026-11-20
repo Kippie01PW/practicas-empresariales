@@ -45,7 +45,7 @@
       Escenarios: 1, 6, 10, 11
       Depende de: T-04, T-06
 
-- [ ] T-10 Implementar adaptador en memoria InMemoryRepositorioActaFinal con generación de consecutivo anual ACTA-AÑO-NNNN y soporte de compensación
+- [X] T-10 Implementar adaptador en memoria InMemoryRepositorioActaFinal con generación de consecutivo anual ACTA-AÑO-NNNN y soporte de compensación
       Archivos: infraestructura/adaptadores/repositorio_memoria.py
       Escenarios: 1, 5, 6, 10
       Depende de: T-02, T-05

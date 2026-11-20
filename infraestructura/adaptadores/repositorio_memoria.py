@@ -1,13 +1,13 @@
-"""Adaptadores de persistencia en memoria para Práctica, ReglaPrograma, DocenteAsesor, RegistroHoras, TokenEvaluacion, EvaluacionDesempeno y Bitácora.
+"""Adaptadores de persistencia en memoria para Práctica, ReglaPrograma, DocenteAsesor, RegistroHoras, TokenEvaluacion, EvaluacionDesempeno, ActaFinal y Bitácora.
 
-Traza: CU-01, CU-02, CU-03, CU-04, CU-05, CU-06, CU-07, CU-12, EAC-01, EAC-02, EAC-03, RT-01, RN-01, RN-02, RN-03, RN-04, ADR-001, ADR-002, ADR-003, ADR-004, ADR-006, ADR-007, ADR-010.
+Traza: CU-01, CU-02, CU-03, CU-04, CU-05, CU-06, CU-07, CU-09, CU-10, CU-12, EAC-01, EAC-02, EAC-03, RT-01, RN-01, RN-02, RN-03, RN-04, DT-02, ADR-001, ADR-002, ADR-003, ADR-004, ADR-006, ADR-007, ADR-008, ADR-010.
 Vista Lógica §2, Vista de Desarrollo §2.
 
 Implementa los puertos `RepositorioPracticaPort`, `RepositorioReglaProgramaPort`,
-`RepositorioDocentePort`, `RepositorioRegistroHorasPort`, `RepositorioTokenEvaluacionPort`
-y `RepositorioEvaluacionDesempenoPort` utilizando estructuras en memoria deterministas
-para pruebas y validación sin dependencias externas ni bases de datos reales en esta etapa
-(ADR-002, ADR-003, ADR-004).
+`RepositorioDocentePort`, `RepositorioRegistroHorasPort`, `RepositorioTokenEvaluacionPort`,
+`RepositorioEvaluacionDesempenoPort` y `RepositorioActaFinalPort` utilizando estructuras en
+memoria deterministas para pruebas y validación sin dependencias externas ni bases de datos
+reales en esta etapa (ADR-002, ADR-003, ADR-004, ADR-008).
 """
 
 from __future__ import annotations
@@ -23,6 +23,7 @@ from aplicacion.puertos.repositorio_practica import RepositorioPracticaPort
 from aplicacion.puertos.repositorio_registro_horas import RepositorioRegistroHorasPort
 from aplicacion.puertos.repositorio_regla import RepositorioReglaProgramaPort
 from aplicacion.puertos.repositorio_token_evaluacion import RepositorioTokenEvaluacionPort
+from dominio.errores import ErrorAlmacenamientoActaPdfError
 from dominio.modelos.acta_final import ActaFinal
 from dominio.modelos.docente_asesor import DocenteAsesor
 from dominio.modelos.evaluacion_desempeno import EvaluacionDesempeno
@@ -362,50 +363,155 @@ class InMemoryRepositorioEvaluacionDesempeno(RepositorioEvaluacionDesempenoPort)
 class InMemoryRepositorioActaFinal(RepositorioActaFinalPort):
     """Implementación en memoria del puerto RepositorioActaFinalPort.
 
-    Traza: CU-09, CU-10, EAC-03, OB-05, PA-03, RN-01, RN-02, RN-03,
+    Traza: CU-09, CU-10, EAC-01, EAC-03, OB-01, OB-05, PA-03, RN-01, RN-02, RN-03, DT-02,
     ADR-002, ADR-003, ADR-008, ADR-010, Vista Lógica §2 (01-logica.puml).
 
-    Almacena en memoria las instancias de ActaFinal indexadas por id y por
-    practica_id, garantizando la relación 1 a 0..1 entre Practica y ActaFinal.
+    Almacena en memoria las instancias de ActaFinal indexadas por id, por practica_id
+    (garantizando la relación 1 a 0..1 entre Practica y ActaFinal) y por numero_acta.
+    Mantiene el contador consecutivo anual para siguiente_numero_acta(anio) con formato
+    "ACTA-<AÑO>-<NNNN>" (ej. "ACTA-2026-0001") y soporta simulación determinista de
+    fallo de persistencia junto con compensación transaccional (eliminar_por_id) para
+    validar la consistencia atómica del Escenario 10 (DT-02).
     """
 
-    def __init__(self, actas_iniciales: Optional[list[ActaFinal]] = None) -> None:
+    def __init__(
+        self, actas_iniciales: Optional[list[ActaFinal]] = None
+    ) -> None:
         self._actas_por_id: dict[str, ActaFinal] = {}
         self._actas_por_practica: dict[str, ActaFinal] = {}
+        self._actas_por_numero: dict[str, ActaFinal] = {}
+        self._consecutivos_por_anio: dict[int, int] = {}
+        self._fallo_guardado_activo: bool = False
+        self._mensaje_fallo_guardado: str = (
+            "Fallo simulado de persistencia al guardar el registro de ActaFinal."
+        )
         if actas_iniciales:
             for acta in actas_iniciales:
                 self.guardar(acta)
 
     def guardar(self, acta: ActaFinal) -> None:
-        """Persiste una nueva instancia de ActaFinal en memoria."""
+        """Persiste una nueva instancia de ActaFinal en el almacén en memoria.
+
+        Raises:
+            ErrorAlmacenamientoActaPdfError: Si se encuentra activa la simulación de fallo
+                de guardado para validar la compensación transaccional (Escenario 10, DT-02).
+        """
+        if self._fallo_guardado_activo:
+            raise ErrorAlmacenamientoActaPdfError(
+                practica_id=acta.practica_id,
+                ruta_archivo_pdf=acta.ruta_archivo_pdf,
+                causa=self._mensaje_fallo_guardado,
+            )
+
         self._actas_por_id[acta.id] = acta
         self._actas_por_practica[acta.practica_id] = acta
+        self._actas_por_numero[acta.numero_acta] = acta
+        self._sincronizar_consecutivo_desde_numero(acta.numero_acta)
 
     def actualizar(self, acta: ActaFinal) -> None:
-        """Actualiza el estado de firmas electrónicas y datos de un ActaFinal existente."""
+        """Actualiza el estado de firmas electrónicas y datos de un ActaFinal existente (CU-10)."""
+        if self._fallo_guardado_activo:
+            raise ErrorAlmacenamientoActaPdfError(
+                practica_id=acta.practica_id,
+                ruta_archivo_pdf=acta.ruta_archivo_pdf,
+                causa=self._mensaje_fallo_guardado,
+            )
+
         self._actas_por_id[acta.id] = acta
         self._actas_por_practica[acta.practica_id] = acta
+        self._actas_por_numero[acta.numero_acta] = acta
+        self._sincronizar_consecutivo_desde_numero(acta.numero_acta)
 
     def buscar_por_id(self, acta_id: str) -> Optional[ActaFinal]:
-        """Busca y retorna un ActaFinal por su identificador único."""
+        """Busca y retorna un acta final por su identificador único."""
         if not acta_id:
             return None
         return self._actas_por_id.get(acta_id.strip())
 
     def buscar_por_practica(self, practica_id: str) -> Optional[ActaFinal]:
-        """Busca y retorna el ActaFinal asociada a una práctica empresarial."""
+        """Busca si ya existe un acta final asociada a la práctica empresarial indicada.
+
+        Garantiza la verificación de la invariante de multiplicidad 1 a 0..1 entre
+        Practica y ActaFinal (CU-09 Escenario 5).
+        """
         if not practica_id:
             return None
         return self._actas_por_practica.get(practica_id.strip())
 
+    def buscar_por_numero_acta(self, numero_acta: str) -> Optional[ActaFinal]:
+        """Busca y retorna un acta final por su número oficial consecutivo anual."""
+        if not numero_acta:
+            return None
+        return self._actas_por_numero.get(numero_acta.strip())
+
+    def siguiente_numero_acta(self, anio: int) -> str:
+        """Genera el siguiente número oficial consecutivo anual con formato 'ACTA-<AÑO>-<NNNN>'.
+
+        Traza: CU-09, Escenarios 1 y 6 (ej. 'ACTA-2026-0001').
+        Calcula el siguiente consecutivo disponible para el año indicado a partir de las
+        actas efectivamente persistidas y del contador anual.
+        """
+        anio_entero = int(anio)
+        max_persistido = self._maximo_consecutivo_persistido(anio_entero)
+        actual = max(self._consecutivos_por_anio.get(anio_entero, 0), max_persistido)
+        siguiente = actual + 1
+        self._consecutivos_por_anio[anio_entero] = siguiente
+        return f"ACTA-{anio_entero:04d}-{siguiente:04d}"
+
+    def eliminar_por_id(self, acta_id: str) -> None:
+        """Elimina un registro de ActaFinal por su identificador para compensación transaccional (DT-02, Escenario 10)."""
+        if not acta_id:
+            return
+        acta = self._actas_por_id.pop(acta_id.strip(), None)
+        if acta is not None:
+            self._actas_por_practica.pop(acta.practica_id, None)
+            self._actas_por_numero.pop(acta.numero_acta, None)
+            partes = acta.numero_acta.split("-")
+            if len(partes) == 3 and partes[1].isdigit():
+                anio = int(partes[1])
+                self._consecutivos_por_anio[anio] = self._maximo_consecutivo_persistido(anio)
+
     def listar_todas(self) -> list[ActaFinal]:
-        """Retorna todas las instancias de ActaFinal almacenadas."""
+        """Retorna todas las actas finales registradas en el almacén en memoria."""
         return list(self._actas_por_id.values())
 
+    def configurar_fallo_guardado(
+        self,
+        activar: bool,
+        mensaje: Optional[str] = None,
+    ) -> None:
+        """Activa o desactiva la simulación determinista de fallo de persistencia (Escenario 10, DT-02)."""
+        self._fallo_guardado_activo = activar
+        if mensaje is not None:
+            self._mensaje_fallo_guardado = mensaje
+
     def limpiar(self) -> None:
-        """Limpia las actas almacenadas (útil para pruebas)."""
+        """Limpia las actas almacenadas, reinicia contadores y desactiva fallos simulados."""
         self._actas_por_id.clear()
         self._actas_por_practica.clear()
+        self._actas_por_numero.clear()
+        self._consecutivos_por_anio.clear()
+        self._fallo_guardado_activo = False
+
+    def _sincronizar_consecutivo_desde_numero(self, numero_acta: str) -> None:
+        """Sincroniza el contador anual si el número de acta persistido supera el consecutivo actual."""
+        partes = numero_acta.strip().split("-")
+        if len(partes) == 3 and partes[0] == "ACTA" and partes[1].isdigit() and partes[2].isdigit():
+            anio = int(partes[1])
+            consecutivo = int(partes[2])
+            if consecutivo > self._consecutivos_por_anio.get(anio, 0):
+                self._consecutivos_por_anio[anio] = consecutivo
+
+    def _maximo_consecutivo_persistido(self, anio: int) -> int:
+        """Retorna el mayor consecutivo actualmente persistido para el año indicado."""
+        prefijo = f"ACTA-{anio:04d}-"
+        maximo = 0
+        for numero in self._actas_por_numero:
+            if numero.startswith(prefijo):
+                sufijo = numero[len(prefijo):]
+                if sufijo.isdigit():
+                    maximo = max(maximo, int(sufijo))
+        return maximo
 
 
 
