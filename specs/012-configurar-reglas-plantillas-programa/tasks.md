@@ -50,7 +50,7 @@
       Escenarios: 1, 2, 3, 4, 5, 6, 7, 8, 9, 10
       Depende de: T-07, T-08, T-09
 
-- [ ] T-11 Validar todos los escenarios de spec.md y generar validacion.md
+- [X] T-11 Validar todos los escenarios de spec.md y generar validacion.md
       Archivos: specs/012-configurar-reglas-plantillas-programa/validacion.md
       Escenarios: 1, 2, 3, 4, 5, 6, 7, 8, 9, 10
       Depende de: T-10
