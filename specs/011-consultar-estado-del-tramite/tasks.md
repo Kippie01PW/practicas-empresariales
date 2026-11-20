@@ -30,7 +30,7 @@
       Escenarios: 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13
       Depende de: T-04, T-05
 
-- [ ] T-07 Validar todos los escenarios de spec.md y generar validacion.md
+- [X] T-07 Validar todos los escenarios de spec.md y generar validacion.md
       Archivos: specs/011-consultar-estado-del-tramite/validacion.md
       Escenarios: 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13
       Depende de: T-06
