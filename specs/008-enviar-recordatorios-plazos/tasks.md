@@ -10,7 +10,7 @@
       Escenarios: 2, 3, 6, 11
       Depende de: ninguna
 
-- [ ] T-03 Crear DTOs inmutables para comando de ejecución de recordatorios, detalle de envíos y métricas consolidadas
+- [X] T-03 Crear DTOs inmutables para comando de ejecución de recordatorios, detalle de envíos y métricas consolidadas
       Archivos: aplicacion/dtos/recordatorio_plazos_dto.py
       Escenarios: 1, 2, 3, 4, 5, 6, 7, 8, 10
       Depende de: ninguna
