@@ -30,7 +30,7 @@
       Escenarios: 9
       Depende de: ninguna
 
-- [ ] T-07 Implementar caso de uso ConfigurarReglasProgramaCasoUso con creación y edición de borrador, simulación de vista previa en memoria, activación atómica y bitácora Append-Only
+- [X] T-07 Implementar caso de uso ConfigurarReglasProgramaCasoUso con creación y edición de borrador, simulación de vista previa en memoria, activación atómica y bitácora Append-Only
       Archivos: aplicacion/casos_uso/configurar_reglas_programa.py
       Escenarios: 1, 2, 3, 4, 5, 6, 7, 8, 9, 10
       Depende de: T-01, T-02, T-03, T-04, T-05, T-06
