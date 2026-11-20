@@ -35,11 +35,18 @@ from aplicacion.casos_uso.enviar_recordatorios_plazos import (
 )
 from aplicacion.casos_uso.evaluar_desempeno import EvaluarDesempenoCasoUso
 from aplicacion.casos_uso.evaluar_postulacion import EvaluarPostulacionCasoUso
+from aplicacion.casos_uso.generar_acta_final import GenerarActaFinalCasoUso
 from aplicacion.casos_uso.postular_estudiante import PostularEstudianteCasoUso
 from aplicacion.casos_uso.registrar_horas import RegistrarHorasCasoUso
 from aplicacion.casos_uso.reintentar_validacion_sia import ReintentarValidacionSiaCasoUso
 from aplicacion.casos_uso.revisar_avances_horas import RevisarAvancesHorasCasoUso
 from aplicacion.casos_uso.validar_horas_registradas import ValidarHorasRegistradasCasoUso
+from aplicacion.dtos.acta_final_dto import (
+    ActaFinalRespuestaDTO,
+    DatosRenderizadoActaDTO,
+    GenerarActaFinalComando,
+    ResultadoRenderizadoPdfDTO,
+)
 from aplicacion.dtos.asignacion_docente_dto import (
     AsignacionDocenteRespuestaDTO,
     AsignarDocenteComando,
@@ -76,12 +83,20 @@ from aplicacion.dtos.validacion_horas_dto import (
     ValidacionHorasRespuestaDTO,
     ValidarHorasComando,
 )
+from aplicacion.puertos.servicio_generador_acta_pdf import (
+    ServicioGeneradorActaPdfPort,
+)
 from aplicacion.seguridad.autorizador_rbac import AutorizadorRBAC, RolUsuario
+from dominio.errores import ErrorAlmacenamientoActaPdfError
 from dominio.modelos.docente_asesor import DocenteAsesor
 from dominio.modelos.regla_programa import EstadoVigenciaRegla, ReglaPrograma
+from infraestructura.adaptadores.adaptador_pdf_hash_simulado import (
+    AdaptadorPdfHashSimulado,
+)
 from infraestructura.adaptadores.broker_memoria import InMemoryBrokerMensajes
 from infraestructura.adaptadores.cliente_sia_simulado import AdaptadorSiaSimulado
 from infraestructura.adaptadores.repositorio_memoria import (
+    InMemoryRepositorioActaFinal,
     InMemoryRepositorioDocente,
     InMemoryRepositorioEvaluacionDesempeno,
     InMemoryRepositorioPractica,
@@ -94,6 +109,177 @@ from infraestructura.seguridad.interceptor_identidad import InterceptorIdentidad
 from infraestructura.seguridad.proveedor_identidad_simulado import (
     ProveedorIdentidadSimulado,
 )
+
+
+class AdaptadorPdfYHashSimulado(AdaptadorPdfHashSimulado, ServicioGeneradorActaPdfPort):
+    """Adaptador determinista que unifica ServicioGeneradorActaPdfPort (CU-09) y ServicioPdfHashPort (CU-10).
+
+    Renderiza dinámicamente la plantilla HTML/CSS (`plantillaActa`) de la `ReglaPrograma` vinculada
+    a un binario PDF determinista (`%PDF-1.4 ... %%EOF`), calcula su huella criptográfica SHA-256
+    de 64 caracteres hexadecimales (ADR-008) y gestiona el volumen simulado de actas PDF con soporte
+    de compensación transaccional ante fallos (DT-02, Escenario 10).
+    """
+
+    def __init__(
+        self,
+        directorio_base: str = "/repositorio_actas",
+    ) -> None:
+        super().__init__()
+        self._directorio_base: str = directorio_base.rstrip("/") or "/repositorio_actas"
+        self._html_renderizados: dict[str, str] = {}
+        self._fallo_escritura_activo: bool = False
+        self._mensaje_fallo_escritura: str = (
+            "Fallo simulado de entrada/salida al escribir en el repositorio de actas PDF."
+        )
+
+    def generar_y_guardar_acta_pdf(
+        self,
+        datos: DatosRenderizadoActaDTO,
+    ) -> ResultadoRenderizadoPdfDTO:
+        """Renderiza la plantilla HTML/CSS a PDF, calcula su hash SHA-256 y almacena el binario (CU-09)."""
+        anio_emision = datos.fecha_emision.year
+        ruta_archivo_pdf = (
+            f"{self._directorio_base}/{anio_emision}/{datos.numero_acta}.pdf"
+        )
+
+        if self._fallo_escritura_activo:
+            raise ErrorAlmacenamientoActaPdfError(
+                practica_id=datos.practica_id,
+                ruta_archivo_pdf=ruta_archivo_pdf,
+                causa=self._mensaje_fallo_escritura,
+            )
+
+        html_renderizado = self._renderizar_plantilla_html(datos)
+        contenido_pdf = self._empaquetar_binario_pdf(datos, html_renderizado)
+        hash_sha256 = self.guardar_binario_pdf(ruta_archivo_pdf, contenido_pdf)
+        self._html_renderizados[ruta_archivo_pdf] = html_renderizado
+
+        return ResultadoRenderizadoPdfDTO(
+            ruta_archivo_pdf=ruta_archivo_pdf,
+            contenido_pdf=contenido_pdf,
+            hash_integridad_sha256=hash_sha256,
+            plantilla_utilizada=datos.plantilla_acta,
+        )
+
+    def obtener_contenido_pdf(self, ruta_archivo_pdf: str) -> bytes | None:
+        """Recupera el contenido binario de un archivo PDF almacenado o None si no existe."""
+        if not isinstance(ruta_archivo_pdf, str) or not ruta_archivo_pdf.strip():
+            return None
+        return self._archivos_pdf.get(ruta_archivo_pdf.strip())
+
+    def eliminar_archivo_pdf(self, ruta_archivo_pdf: str) -> None:
+        """Elimina un archivo PDF del repositorio para compensación transaccional (DT-02, Escenario 10)."""
+        if not isinstance(ruta_archivo_pdf, str) or not ruta_archivo_pdf.strip():
+            return
+        ruta = ruta_archivo_pdf.strip()
+        self._archivos_pdf.pop(ruta, None)
+        self._html_renderizados.pop(ruta, None)
+
+    def configurar_fallo_escritura(
+        self,
+        activar: bool,
+        mensaje: str | None = None,
+    ) -> None:
+        """Activa o desactiva la simulación determinista de fallo de escritura (Escenario 10, DT-02)."""
+        self._fallo_escritura_activo = activar
+        if mensaje is not None:
+            self._mensaje_fallo_escritura = mensaje
+
+    def obtener_html_renderizado(self, ruta_archivo_pdf: str) -> str | None:
+        """Retorna el documento HTML intermedio renderizado a partir de la plantilla para inspección."""
+        if not isinstance(ruta_archivo_pdf, str) or not ruta_archivo_pdf.strip():
+            return None
+        return self._html_renderizados.get(ruta_archivo_pdf.strip())
+
+    def listar_rutas_archivos(self) -> list[str]:
+        """Retorna la lista ordenada de todas las rutas de archivos PDF almacenados."""
+        return sorted(self._archivos_pdf.keys())
+
+    def cantidad_archivos_almacenados(self) -> int:
+        """Retorna el total de archivos PDF actualmente almacenados en el repositorio."""
+        return len(self._archivos_pdf)
+
+    def limpiar(self) -> None:
+        """Reinicia el almacén en memoria de archivos PDF y desactiva fallos simulados."""
+        super().limpiar()
+        self._html_renderizados.clear()
+        self._fallo_escritura_activo = False
+
+    def _renderizar_plantilla_html(self, datos: DatosRenderizadoActaDTO) -> str:
+        """Inyecta los datos consolidados de la práctica en la plantilla HTML/CSS de la ReglaPrograma (ADR-007, ADR-008)."""
+        concepto_desempeno = (
+            "APROBATORIA" if datos.es_aprobatoria else "REPROBATORIA"
+        )
+        observaciones_texto = (
+            datos.observaciones_evaluacion
+            if datos.observaciones_evaluacion
+            else "Sin observaciones adicionales."
+        )
+        criterios_rubrica = "; ".join(
+            f"{criterio}: {puntaje:.2f}"
+            for criterio, puntaje in sorted(datos.respuestas_rubrica.items())
+        )
+        fecha_iso = datos.fecha_emision.isoformat()
+
+        return (
+            "<!DOCTYPE html>\n"
+            "<html lang=\"es\">\n"
+            "<head>\n"
+            "  <meta charset=\"UTF-8\">\n"
+            f"  <meta name=\"template\" content=\"{datos.plantilla_acta}\">\n"
+            f"  <meta name=\"regla-programa-id\" content=\"{datos.regla_programa_id}\">\n"
+            f"  <meta name=\"regla-version\" content=\"{datos.version_regla}\">\n"
+            f"  <title>Acta Final de Práctica Empresarial - {datos.numero_acta}</title>\n"
+            "</head>\n"
+            "<body>\n"
+            f"  <h1>ACTA FINAL DE PRÁCTICA EMPRESARIAL - {datos.numero_acta}</h1>\n"
+            f"  <p><strong>Plantilla Aplicada:</strong> {datos.plantilla_acta} "
+            f"(Regla: {datos.regla_programa_id}, Versión: {datos.version_regla})</p>\n"
+            f"  <p><strong>Programa Académico:</strong> {datos.programa_academico}</p>\n"
+            f"  <p><strong>Identificador de Práctica:</strong> {datos.practica_id}</p>\n"
+            f"  <p><strong>Estudiante:</strong> {datos.estudiante_id}</p>\n"
+            f"  <p><strong>Docente Asesor:</strong> {datos.docente_asesor_id} - {datos.nombre_docente_asesor}</p>\n"
+            f"  <p><strong>Supervisor de Empresa:</strong> {datos.supervisor_empresa_id}</p>\n"
+            f"  <p><strong>Horas Aprobadas / Horas Requeridas:</strong> "
+            f"{datos.horas_acumuladas_aprobadas} / {datos.horas_requeridas}</p>\n"
+            f"  <p><strong>Calificación Cuantitativa:</strong> {datos.calificacion_cuantitativa:.2f} "
+            f"({concepto_desempeno})</p>\n"
+            f"  <p><strong>Detalle de Rúbrica:</strong> {criterios_rubrica}</p>\n"
+            f"  <p><strong>Observaciones de Evaluación:</strong> {observaciones_texto}</p>\n"
+            f"  <p><strong>Fecha de Emisión:</strong> {fecha_iso}</p>\n"
+            "</body>\n"
+            "</html>"
+        )
+
+    def _empaquetar_binario_pdf(
+        self,
+        datos: DatosRenderizadoActaDTO,
+        html_renderizado: str,
+    ) -> bytes:
+        """Construye un documento binario PDF determinista a partir del HTML renderizado."""
+        cuerpo_pdf = (
+            "%PDF-1.4\n"
+            f"% ActaFinal: {datos.numero_acta}\n"
+            f"% Practica: {datos.practica_id}\n"
+            f"% Plantilla: {datos.plantilla_acta} (Version: {datos.version_regla})\n"
+            "1 0 obj\n"
+            "<< /Type /Catalog /Pages 2 0 R >>\n"
+            "endobj\n"
+            "2 0 obj\n"
+            "<< /Type /Pages /Kids [3 0 R] /Count 1 >>\n"
+            "endobj\n"
+            "3 0 obj\n"
+            "<< /Type /Page /Parent 2 0 R /Contents 4 0 R >>\n"
+            "endobj\n"
+            "4 0 obj\n"
+            f"<< /Length {len(html_renderizado.encode('utf-8'))} >>\n"
+            "stream\n"
+            f"{html_renderizado}\n"
+            "endstream\n"
+            "endobj\n"
+            "%%EOF\n"
+        )
+        return cuerpo_pdf.encode("utf-8")
 
 
 @dataclass(slots=True)
@@ -114,6 +300,7 @@ class SistemaPracticasEmpresariales:
     caso_uso_revisar_avances_horas: RevisarAvancesHorasCasoUso
     caso_uso_evaluar_desempeno: EvaluarDesempenoCasoUso
     caso_uso_enviar_recordatorios: EnviarRecordatoriosPlazosCasoUso
+    caso_uso_generar_acta: GenerarActaFinalCasoUso
 
     # Componentes de seguridad y autorización
     autorizador_rbac: AutorizadorRBAC
@@ -127,6 +314,8 @@ class SistemaPracticasEmpresariales:
     repositorio_registro_horas: InMemoryRepositorioRegistroHoras
     repositorio_token: InMemoryRepositorioTokenEvaluacion
     repositorio_evaluacion: InMemoryRepositorioEvaluacionDesempeno
+    repositorio_acta: InMemoryRepositorioActaFinal
+    servicio_pdf: AdaptadorPdfYHashSimulado
     servicio_sia: AdaptadorSiaSimulado
     broker_mensajes: InMemoryBrokerMensajes
     servicio_correo: AdaptadorCorreoSimulado
@@ -153,6 +342,8 @@ def inicializar_sistema(
     repo_registro_horas = InMemoryRepositorioRegistroHoras()
     repo_token = InMemoryRepositorioTokenEvaluacion()
     repo_evaluacion = InMemoryRepositorioEvaluacionDesempeno()
+    repo_acta = InMemoryRepositorioActaFinal()
+    servicio_pdf = AdaptadorPdfYHashSimulado()
     servicio_sia = AdaptadorSiaSimulado(umbral_fallos=umbral_fallos_sia)
     broker_mensajes = InMemoryBrokerMensajes()
     servicio_correo = AdaptadorCorreoSimulado()
@@ -297,6 +488,16 @@ def inicializar_sistema(
         interceptor_identidad=interceptor_identidad,
     )
 
+    caso_uso_generar_acta = GenerarActaFinalCasoUso(
+        repositorio_practica=repo_practica,
+        repositorio_regla=repo_regla,
+        repositorio_evaluacion=repo_evaluacion,
+        repositorio_acta=repo_acta,
+        servicio_pdf=servicio_pdf,
+        autorizador_rbac=autorizador_rbac,
+        repositorio_docente=repo_docente,
+    )
+
     return SistemaPracticasEmpresariales(
         caso_uso_postular=caso_uso_postular,
         caso_uso_reintentar_sia=caso_uso_reintentar_sia,
@@ -307,6 +508,7 @@ def inicializar_sistema(
         caso_uso_revisar_avances_horas=caso_uso_revisar_avances_horas,
         caso_uso_evaluar_desempeno=caso_uso_evaluar_desempeno,
         caso_uso_enviar_recordatorios=caso_uso_enviar_recordatorios,
+        caso_uso_generar_acta=caso_uso_generar_acta,
         autorizador_rbac=autorizador_rbac,
         proveedor_identidad=proveedor_identidad,
         interceptor_identidad=interceptor_identidad,
@@ -316,6 +518,8 @@ def inicializar_sistema(
         repositorio_registro_horas=repo_registro_horas,
         repositorio_token=repo_token,
         repositorio_evaluacion=repo_evaluacion,
+        repositorio_acta=repo_acta,
+        servicio_pdf=servicio_pdf,
         servicio_sia=servicio_sia,
         broker_mensajes=broker_mensajes,
         servicio_correo=servicio_correo,
@@ -337,6 +541,8 @@ def main() -> int:
     print("    - Repositorio de Horas:     InMemoryRepositorioRegistroHoras")
     print("    - Repositorio de Tokens:    InMemoryRepositorioTokenEvaluacion")
     print("    - Repositorio Evaluaciones: InMemoryRepositorioEvaluacionDesempeno")
+    print("    - Repositorio de Actas:     InMemoryRepositorioActaFinal")
+    print("    - Servicio PDF y Hash:      AdaptadorPdfYHashSimulado")
     print("    - Servicio SIA:             AdaptadorSiaSimulado (Circuit Breaker activo)")
     print("    - Bróker de Mensajería:     InMemoryBrokerMensajes (Tareas + DLQ)")
     print("    - Servicio de Correo:       AdaptadorCorreoSimulado")
@@ -349,7 +555,8 @@ def main() -> int:
     print("                                ValidarHorasRegistradasCasoUso (CU-05),")
     print("                                RevisarAvancesHorasCasoUso (CU-06),")
     print("                                EvaluarDesempenoCasoUso (CU-07),")
-    print("                                EnviarRecordatoriosPlazosCasoUso (CU-08)")
+    print("                                EnviarRecordatoriosPlazosCasoUso (CU-08),")
+    print("                                GenerarActaFinalCasoUso (CU-09)")
 
     # Demostración del Escenario 1: Postulación exitosa
     print("\n--- Demostración CU-01: Postulación exitosa (Escenario 1) ---")
@@ -587,6 +794,38 @@ def main() -> int:
         f"Intento en cooldown:  enviados={resultado_cooldown.total_recordatorios_enviados}, "
         f"omitidos_cooldown={resultado_cooldown.total_omitidos_por_cooldown}"
     )
+
+    eventos = sistema.repositorio_practica.buscar_eventos_por_entidad(f"Practica:{respuesta.practica_id}")
+    print(f"Total eventos en bitácora:     {len(eventos)}")
+
+    # Demostración CU-09: Generación del Acta Final en PDF con sellado criptográfico SHA-256
+    print("\n--- Demostración CU-09: Generación del Acta Final en PDF con Sellado SHA-256 (Escenario 1) ---")
+    practica_para_acta = sistema.repositorio_practica.buscar_por_id(respuesta.practica_id or "")
+    if practica_para_acta:
+        # Completar las 320 horas aprobadas requeridas por la regla del programa para la demostración
+        object.__setattr__(practica_para_acta, "_horas_acumuladas_aprobadas", 320)
+        sistema.repositorio_practica.actualizar(practica_para_acta)
+
+    comando_generar_acta = GenerarActaFinalComando(
+        practica_id=respuesta.practica_id or "",
+        actor_id="doc_001",
+        rol_actor=RolUsuario.DOCENTE_ASESOR.value,
+        ip_origen="192.168.1.60",
+        fecha_emision=datetime(2026, 11, 20, 12, 0, 0, tzinfo=timezone.utc),
+    )
+    respuesta_acta: ActaFinalRespuestaDTO = sistema.caso_uso_generar_acta(comando_generar_acta)
+    print(f"Número de Acta:       {respuesta_acta.numero_acta}")
+    print(f"Plantilla aplicada:   {respuesta_acta.plantilla_acta} (v{respuesta_acta.version_regla})")
+    print(f"Horas acreditadas:    {respuesta_acta.horas_acumuladas_aprobadas}/{respuesta_acta.horas_requeridas}h")
+    print(f"Calificación:         {respuesta_acta.calificacion_cuantitativa} (Aprobatoria: {respuesta_acta.es_aprobatoria})")
+    print(f"Ruta Archivo PDF:     {respuesta_acta.ruta_archivo_pdf}")
+    print(f"Hash SHA-256:         {respuesta_acta.hash_integridad_sha256}")
+    print(
+        f"Firmas pendientes:    aprobadaPorDocente={respuesta_acta.aprobada_por_docente}, "
+        f"aprobadaPorCoordinador={respuesta_acta.aprobada_por_coordinador}"
+    )
+    print(f"Estado Práctica:      {respuesta_acta.estado_practica}")
+    print(f"Mensaje:              {respuesta_acta.mensaje}")
 
     eventos = sistema.repositorio_practica.buscar_eventos_por_entidad(f"Practica:{respuesta.practica_id}")
     print(f"Total eventos en bitácora:     {len(eventos)}")

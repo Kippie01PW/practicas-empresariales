@@ -50,7 +50,7 @@
       Escenarios: 1, 5, 6, 10
       Depende de: T-02, T-05
 
-- [ ] T-11 Integrar InMemoryRepositorioActaFinal, AdaptadorPdfYHashSimulado y GenerarActaFinalCasoUso en el punto de composición main.py
+- [X] T-11 Integrar InMemoryRepositorioActaFinal, AdaptadorPdfYHashSimulado y GenerarActaFinalCasoUso en el punto de composición main.py
       Archivos: main.py
       Escenarios: 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12
       Depende de: T-08, T-09, T-10
