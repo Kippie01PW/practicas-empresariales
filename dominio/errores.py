@@ -1,6 +1,6 @@
 """Excepciones y errores de la capa de dominio.
 
-Traza: CU-01, CU-02, CU-03, CU-04, CU-05, CU-07, ADR-002, ADR-004, ADR-005,
+Traza: CU-01, CU-02, CU-03, CU-04, CU-05, CU-07, CU-08, ADR-002, ADR-004, ADR-005,
 ADR-006, ADR-007, ADR-010.
 
 Define las excepciones del modelo de dominio del sistema de gestión de prácticas
@@ -922,5 +922,52 @@ class RespuestasRubricaInvalidasError(ErrorDominio):
             f"criterios_fuera_rango={self.criterios_fuera_rango!r}, "
             f"criterios_desconocidos={self.criterios_desconocidos!r})"
         )
+
+
+# ---------------------------------------------------------------------------
+# CU-08: Excepciones para envío de recordatorios de plazos y control de
+#        ventana de enfriamiento (ADR-001, ADR-004, ADR-006)
+# ---------------------------------------------------------------------------
+
+
+class RecordatorioEnEnfriamientoError(ErrorDominio):
+    """Excepción lanzada cuando se intenta despachar un recordatorio dentro del período de enfriamiento.
+
+    Traza: CU-08, Escenario 7 (Prevención de envío duplicado de recordatorios dentro del período
+    de enfriamiento de 1 hora), ADR-006 (Bitácora de auditoría transaccional Append-Only).
+
+    Garantiza la idempotencia del despacho de recordatorios evitando correos duplicados cuando
+    ya se ha emitido un recordatorio para la misma práctica y acción pendiente hace menos de
+    la ventana de enfriamiento configurada (por defecto 60 minutos / 1 hora).
+    """
+
+    def __init__(
+        self,
+        practica_id: Optional[str] = None,
+        tipo_recordatorio: Optional[str] = None,
+        cooldown_minutos: int = 60,
+        mensaje: Optional[str] = None,
+    ) -> None:
+        self.practica_id: Optional[str] = practica_id
+        self.tipo_recordatorio: Optional[str] = tipo_recordatorio
+        self.cooldown_minutos: int = cooldown_minutos
+
+        if mensaje is None:
+            detalle_practica = f" para la práctica '{practica_id}'" if practica_id else ""
+            detalle_tipo = f" (acción: '{tipo_recordatorio}')" if tipo_recordatorio else ""
+            mensaje = (
+                f"Ya se despachó un recordatorio{detalle_practica}{detalle_tipo} dentro de la "
+                f"ventana de enfriamiento de {cooldown_minutos} minutos. Se omite el envío duplicado."
+            )
+        super().__init__(mensaje)
+
+    def __repr__(self) -> str:
+        return (
+            f"RecordatorioEnEnfriamientoError("
+            f"practica_id={self.practica_id!r}, "
+            f"tipo_recordatorio={self.tipo_recordatorio!r}, "
+            f"cooldown_minutos={self.cooldown_minutos!r})"
+        )
+
 
 

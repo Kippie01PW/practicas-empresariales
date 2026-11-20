@@ -1,6 +1,6 @@
 # Tareas: 008 Enviar recordatorios de plazos
 
-- [ ] T-01 Incorporar excepción de dominio para bloqueo por período de enfriamiento de recordatorios
+- [X] T-01 Incorporar excepción de dominio para bloqueo por período de enfriamiento de recordatorios
       Archivos: dominio/errores.py
       Escenarios: 7
       Depende de: ninguna
