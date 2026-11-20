@@ -20,7 +20,7 @@
       Escenarios: 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13
       Depende de: T-01, T-02, T-03
 
-- [ ] T-05 Implementar búsqueda de práctica activa o más reciente por estudiante en InMemoryRepositorioPractica
+- [X] T-05 Implementar búsqueda de práctica activa o más reciente por estudiante en InMemoryRepositorioPractica
       Archivos: infraestructura/adaptadores/repositorio_memoria.py
       Escenarios: 7, 8, 13
       Depende de: T-02

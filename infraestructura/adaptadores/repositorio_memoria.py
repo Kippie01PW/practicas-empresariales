@@ -1,6 +1,6 @@
 """Adaptadores de persistencia en memoria para Práctica, ReglaPrograma, DocenteAsesor, RegistroHoras, TokenEvaluacion, EvaluacionDesempeno, ActaFinal y Bitácora.
 
-Traza: CU-01, CU-02, CU-03, CU-04, CU-05, CU-06, CU-07, CU-09, CU-10, CU-12, EAC-01, EAC-02, EAC-03, RT-01, RN-01, RN-02, RN-03, RN-04, DT-02, ADR-001, ADR-002, ADR-003, ADR-004, ADR-006, ADR-007, ADR-008, ADR-010.
+Traza: CU-01, CU-02, CU-03, CU-04, CU-05, CU-06, CU-07, CU-09, CU-10, CU-11, CU-12, EAC-01, EAC-02, EAC-03, RT-01, RN-01, RN-02, RN-03, RN-04, DT-02, ADR-001, ADR-002, ADR-003, ADR-004, ADR-006, ADR-007, ADR-008, ADR-010.
 Vista Lógica §2, Vista de Desarrollo §2.
 
 Implementa los puertos `RepositorioPracticaPort`, `RepositorioReglaProgramaPort`,
@@ -69,6 +69,47 @@ class InMemoryRepositorioPractica(RepositorioPracticaPort):
             if practica.estudiante_id == estudiante_id and practica.es_activa():
                 return practica
         return None
+
+    def buscar_mas_reciente_o_activa_por_estudiante(
+        self, estudiante_id: str
+    ) -> Optional[Practica]:
+        """Busca la práctica activa en curso o la más reciente de un estudiante (CU-11).
+
+        Traza: CU-11, Escenarios 7, 8 y 13, plan.md. ADR-002, ADR-003, ADR-010.
+
+        Filtra todas las prácticas pertenecientes al estudiante:
+        - Si el estudiante no cuenta con ninguna práctica registrada, retorna `None` (Escenario 8).
+        - Si existe al menos una práctica activa en curso (`practica.es_activa() == True`),
+          la prioriza sobre postulaciones previas rechazadas o históricas (Escenario 7).
+        - Si existen varias prácticas en el grupo candidato, retorna la más reciente según
+          `fecha_postulacion`, preservando el último registro insertado como desempate
+          determinista en caso de empate de timestamp (Escenarios 7 y 13).
+        """
+        if not estudiante_id:
+            return None
+        estudiante_id_limpio = str(estudiante_id).strip()
+        if not estudiante_id_limpio:
+            return None
+
+        candidatas: list[tuple[int, Practica]] = [
+            (indice, practica)
+            for indice, practica in enumerate(self._practicas.values())
+            if practica.estudiante_id == estudiante_id_limpio
+        ]
+        if not candidatas:
+            return None
+
+        activas: list[tuple[int, Practica]] = [
+            (indice, practica)
+            for indice, practica in candidatas
+            if practica.es_activa()
+        ]
+        grupo_seleccionado = activas if activas else candidatas
+        _, practica_seleccionada = max(
+            grupo_seleccionado,
+            key=lambda par: (par[1].fecha_postulacion, par[0]),
+        )
+        return practica_seleccionada
 
     def listar_por_docente(self, docente_asesor_id: str) -> list[Practica]:
         """Retorna las prácticas asignadas al docente asesor indicado (CU-06, RN-01, RT-01).
