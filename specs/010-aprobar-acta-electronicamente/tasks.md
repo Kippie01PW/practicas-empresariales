@@ -25,7 +25,7 @@
       Escenarios: 1, 2, 3, 4, 5, 6
       Depende de: T-02
 
-- [ ] T-06 Definir puerto ServicioPdfHashPort para lectura de binario PDF y recálculo de huella de integridad SHA-256
+- [X] T-06 Definir puerto ServicioPdfHashPort para lectura de binario PDF y recálculo de huella de integridad SHA-256
       Archivos: aplicacion/puertos/servicio_pdf_hash.py
       Escenarios: 1, 2, 4
       Depende de: ninguna
