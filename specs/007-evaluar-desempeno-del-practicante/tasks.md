@@ -5,7 +5,7 @@
       Escenarios: 5, 6, 7, 11, 12
       Depende de: ninguna
 
-- [ ] T-02 Crear entidad de dominio EvaluacionDesempeno con validación de escala 0.0 a 5.0, observaciones para reprobatoria y respuestas de rúbrica
+- [X] T-02 Crear entidad de dominio EvaluacionDesempeno con validación de escala 0.0 a 5.0, observaciones para reprobatoria y respuestas de rúbrica
       Archivos: dominio/modelos/evaluacion_desempeno.py
       Escenarios: 2, 3, 4, 5, 6, 7, 16
       Depende de: T-01
