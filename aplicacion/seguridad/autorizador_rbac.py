@@ -1,6 +1,6 @@
 """Componente centralizado de autorización basada en roles (RBAC) en la capa de Aplicación.
 
-Traza: CU-01, CU-02, CU-03, CU-04, CU-05, CU-06, CU-07, CU-08, CU-09, CU-10, CU-11, RN-01, RN-03, PA-02, ADR-002, ADR-004, ADR-005,
+Traza: CU-01, CU-02, CU-03, CU-04, CU-05, CU-06, CU-07, CU-08, CU-09, CU-10, CU-11, CU-12, RN-01, RN-03, PA-02, ADR-002, ADR-004, ADR-005,
 Vista Lógica §2, Vista de Desarrollo §2.
 
 Implementa la política de autorización RBAC centralizada y contextual (Context-Based Access Control)
@@ -920,7 +920,72 @@ class AutorizadorRBAC:
                 operacion="consultar_estado_tramite",
             )
 
+    def validar_configuracion_reglas(
+        self,
+        rol_actor: str,
+        usuario_id: Optional[str] = None,
+        operacion: str = "configurar_reglas",
+    ) -> None:
+        """Valida las autorizaciones específicas para la configuración de reglas y plantillas por programa (CU-12).
 
+        Traza: CU-12, Escenario 9, ADR-004, ADR-005 (política deny-by-default),
+        EAC-03 (100% accesos no válidos rechazados, 0 datos expuestos), RN-01, RN-03.
 
+        Verifica bajo política *deny-by-default* que el usuario tenga identidad institucional válida
+        (no vacía cuando se suministra) y posea exclusivamente el rol ``Coordinador`` o
+        ``CoordinadorPracticas`` (``"Coordinador de prácticas"``). Cualquier intento de crear, editar,
+        simular, activar o eliminar una ``ReglaPrograma`` por parte de ``Estudiante``, ``DocenteAsesor``,
+        ``SupervisorEmpresa`` o una solicitud sin sesión/identidad institucional válida lanza
+        ``AccesoDenegadoError``.
 
+        Args:
+            rol_actor: Rol presentado por el usuario autenticado.
+            usuario_id: Identificador del usuario autenticado (opcional).
+            operacion: Nombre de la operación evaluada ('configurar_reglas').
+
+        Raises:
+            AccesoDenegadoError: Si el usuario_id es inválido o el rol del actor no es Coordinador de prácticas.
+        """
+        if usuario_id is not None and not str(usuario_id).strip():
+            raise AccesoDenegadoError(
+                "Acceso denegado: No se ha provisto una identidad de usuario institucional válida.",
+                rol_actor=rol_actor,
+                operacion=operacion,
+                usuario_id=usuario_id,
+            )
+
+        self.validar_rol(
+            rol_actor=rol_actor,
+            roles_permitidos=[
+                RolUsuario.COORDINADOR.value,
+                RolUsuario.COORDINADOR_PRACTICAS.value,
+            ],
+            operacion=operacion,
+            usuario_id=usuario_id,
+        )
+
+    def autorizar_comando_configurar_reglas(
+        self,
+        comando: Any,
+        operacion: str = "configurar_reglas",
+    ) -> None:
+        """Valida un comando de configuración de reglas de programa (CU-12).
+
+        Verifica bajo política *deny-by-default* que el actor tenga identidad institucional válida
+        y rol exclusivo de ``Coordinador de prácticas`` (``Coordinador`` o ``CoordinadorPracticas``).
+        """
+        rol = getattr(comando, "rol_actor", None)
+        actor_id = getattr(comando, "actor_id", None)
+        if not actor_id or not str(actor_id).strip():
+            raise AccesoDenegadoError(
+                "Acceso denegado: No se ha provisto una identidad de usuario institucional válida.",
+                rol_actor=rol,
+                operacion=operacion,
+                usuario_id=actor_id,
+            )
+        self.validar_configuracion_reglas(
+            rol_actor=rol,
+            usuario_id=actor_id,
+            operacion=operacion,
+        )
 

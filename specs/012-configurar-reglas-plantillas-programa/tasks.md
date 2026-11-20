@@ -25,7 +25,7 @@
       Escenarios: 3, 10
       Depende de: ninguna
 
-- [ ] T-06 Configurar método validar_configuracion_reglas en AutorizadorRBAC bajo política deny-by-default para Coordinador de prácticas
+- [X] T-06 Configurar método validar_configuracion_reglas en AutorizadorRBAC bajo política deny-by-default para Coordinador de prácticas
       Archivos: aplicacion/seguridad/autorizador_rbac.py
       Escenarios: 9
       Depende de: ninguna
