@@ -15,7 +15,7 @@
       Escenarios: 2, 3, 4, 11, 12
       Depende de: T-01
 
-- [ ] T-04 Crear DTOs inmutables para consulta de formulario de rúbrica, comando de evaluación y respuestas de CU-07
+- [X] T-04 Crear DTOs inmutables para consulta de formulario de rúbrica, comando de evaluación y respuestas de CU-07
       Archivos: aplicacion/dtos/evaluacion_desempeno_dto.py
       Escenarios: 1, 2, 3, 4, 16
       Depende de: ninguna
