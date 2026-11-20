@@ -20,7 +20,7 @@
       Escenarios: 1, 2, 3, 4, 5, 6, 7, 8, 9, 10
       Depende de: T-01, T-02, T-03
 
-- [ ] T-05 Integrar MonitorearPracticasCasoUso en el punto de composición main.py
+- [X] T-05 Integrar MonitorearPracticasCasoUso en el punto de composición main.py
       Archivos: main.py
       Escenarios: 1, 2, 3, 4, 5, 6, 7, 8, 9, 10
       Depende de: T-04

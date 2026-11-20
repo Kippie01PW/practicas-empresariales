@@ -43,6 +43,7 @@ from aplicacion.casos_uso.enviar_recordatorios_plazos import (
 from aplicacion.casos_uso.evaluar_desempeno import EvaluarDesempenoCasoUso
 from aplicacion.casos_uso.evaluar_postulacion import EvaluarPostulacionCasoUso
 from aplicacion.casos_uso.generar_acta_final import GenerarActaFinalCasoUso
+from aplicacion.casos_uso.monitorear_practicas import MonitorearPracticasCasoUso
 from aplicacion.casos_uso.postular_estudiante import PostularEstudianteCasoUso
 from aplicacion.casos_uso.registrar_horas import RegistrarHorasCasoUso
 from aplicacion.casos_uso.reintentar_validacion_sia import ReintentarValidacionSiaCasoUso
@@ -81,6 +82,12 @@ from aplicacion.dtos.evaluacion_desempeno_dto import (
 from aplicacion.dtos.evaluacion_postulacion_dto import (
     EvaluacionPostulacionRespuestaDTO,
     EvaluarPostulacionComando,
+)
+from aplicacion.dtos.monitoreo_practicas_dto import (
+    ConsultarDetallePracticaMonitoreoComando,
+    ConsultarMonitoreoPracticasComando,
+    DetallePracticaMonitoreoRespuestaDTO,
+    TableroMonitoreoPracticasRespuestaDTO,
 )
 from aplicacion.dtos.postulacion_dto import (
     PostulacionRespuestaDTO,
@@ -350,6 +357,7 @@ class SistemaPracticasEmpresariales:
     caso_uso_aprobar_acta: AprobarActaElectronicamenteCasoUso
     caso_uso_consultar_estado_tramite: ConsultarEstadoTramiteCasoUso
     caso_uso_configurar_reglas: ConfigurarReglasProgramaCasoUso
+    caso_uso_monitorear_practicas: MonitorearPracticasCasoUso
 
     # Componentes de seguridad y autorización
     autorizador_rbac: AutorizadorRBAC
@@ -576,6 +584,16 @@ def inicializar_sistema(
         autorizador_rbac=autorizador_rbac,
     )
 
+    caso_uso_monitorear_practicas = MonitorearPracticasCasoUso(
+        repositorio_practica=repo_practica,
+        repositorio_regla=repo_regla,
+        repositorio_docente=repo_docente,
+        repositorio_registro_horas=repo_registro_horas,
+        repositorio_evaluacion=repo_evaluacion,
+        repositorio_acta_final=repo_acta,
+        autorizador_rbac=autorizador_rbac,
+    )
+
     return SistemaPracticasEmpresariales(
         caso_uso_postular=caso_uso_postular,
         caso_uso_reintentar_sia=caso_uso_reintentar_sia,
@@ -590,6 +608,7 @@ def inicializar_sistema(
         caso_uso_aprobar_acta=caso_uso_aprobar_acta,
         caso_uso_consultar_estado_tramite=caso_uso_consultar_estado_tramite,
         caso_uso_configurar_reglas=caso_uso_configurar_reglas,
+        caso_uso_monitorear_practicas=caso_uso_monitorear_practicas,
         autorizador_rbac=autorizador_rbac,
         proveedor_identidad=proveedor_identidad,
         interceptor_identidad=interceptor_identidad,
@@ -642,7 +661,8 @@ def main() -> int:
     print("                                GenerarActaFinalCasoUso (CU-09),")
     print("                                AprobarActaElectronicamenteCasoUso (CU-10),")
     print("                                ConsultarEstadoTramiteCasoUso (CU-11),")
-    print("                                ConfigurarReglasProgramaCasoUso (CU-12)")
+    print("                                ConfigurarReglasProgramaCasoUso (CU-12),")
+    print("                                MonitorearPracticasCasoUso (CU-13)")
 
     # Demostración del Escenario 1: Postulación exitosa
     print("\n--- Demostración CU-01: Postulación exitosa (Escenario 1) ---")
@@ -1081,6 +1101,46 @@ def main() -> int:
             f"5. Inmutabilidad:     Práctica previa conserva Regla v{regla_practica_previa.version} "
             f"({regla_practica_previa.horas_requeridas}h, {regla_practica_previa.plantilla_acta}) "
             f"-> 0% de alteración (EAC-01)"
+        )
+
+    # Demostración CU-13: Monitoreo general de prácticas (Tablero de control y detalle en solo lectura)
+    print("\n--- Demostración CU-13: Monitoreo del Estado General de Prácticas (Escenarios 1 y 4) ---")
+    comando_tablero = ConsultarMonitoreoPracticasComando(
+        actor_id="COORD-001",
+        rol_actor="Coordinador de prácticas",
+        programa_academico_coordinador="Ingeniería de Sistemas",
+        ip_origen="192.168.1.50",
+    )
+    tablero_dto: TableroMonitoreoPracticasRespuestaDTO = (
+        sistema.caso_uso_monitorear_practicas(comando_tablero)
+    )
+    print(
+        f"Tablero programa:     {tablero_dto.programa_academico} "
+        f"(Total: {tablero_dto.total_practicas_programa}, Filtradas: {tablero_dto.total_practicas_filtradas})"
+    )
+    print(f"Resumen por estado:   {tablero_dto.resumen_por_estado}")
+    print(f"Docentes monitoreados:{len(tablero_dto.carga_docentes)}")
+    print(f"Mensaje tablero:      {tablero_dto.mensaje}")
+
+    if respuesta.practica_id:
+        comando_detalle_monitoreo = ConsultarDetallePracticaMonitoreoComando(
+            practica_id=respuesta.practica_id,
+            actor_id="COORD-001",
+            rol_actor="Coordinador de prácticas",
+            programa_academico_coordinador="Ingeniería de Sistemas",
+            ip_origen="192.168.1.50",
+        )
+        detalle_monitoreo_dto: DetallePracticaMonitoreoRespuestaDTO = (
+            sistema.caso_uso_monitorear_practicas.consultar_detalle_practica(
+                comando_detalle_monitoreo
+            )
+        )
+        print(
+            f"Detalle práctica:     {detalle_monitoreo_dto.practica_id} | "
+            f"Estado={detalle_monitoreo_dto.estado_actual} | "
+            f"Horas={detalle_monitoreo_dto.horas_acumuladas_aprobadas}/{detalle_monitoreo_dto.horas_requeridas}h "
+            f"({detalle_monitoreo_dto.porcentaje_avance_horas}%) | "
+            f"ActaEnFirme={detalle_monitoreo_dto.acta_en_firme}"
         )
 
     print("\n[OK] El sistema de gestión de prácticas está listo y operativo.")
