@@ -15,7 +15,7 @@
       Escenarios: 1, 2, 3, 4, 5, 6, 7
       Depende de: T-02
 
-- [ ] T-04 Incorporar rol Administrador DBA, permiso migrar_practicas_excel y método validar_migracion_excel en AutorizadorRBAC bajo política deny-by-default
+- [X] T-04 Incorporar rol Administrador DBA, permiso migrar_practicas_excel y método validar_migracion_excel en AutorizadorRBAC bajo política deny-by-default
       Archivos: aplicacion/seguridad/autorizador_rbac.py
       Escenarios: 8
       Depende de: ninguna

@@ -32,6 +32,7 @@ class RolUsuario(str, Enum):
     COORDINADOR_PRACTICAS = "CoordinadorPracticas"
     SUPERVISOR = "Supervisor"
     SUPERVISOR_EMPRESA = "SupervisorEmpresa"
+    ADMIN_DBA = "Administrador DBA"
     SISTEMA = "SISTEMA"
 
 
@@ -191,6 +192,9 @@ class AutorizadorRBAC:
             RolUsuario.COORDINADOR.value,
             RolUsuario.COORDINADOR_PRACTICAS.value,
         },
+        "migrar_practicas_excel": {
+            RolUsuario.ADMIN_DBA.value,
+        },
     }
 
     # Alias reconocidos para normalización flexible de roles
@@ -207,6 +211,10 @@ class AutorizadorRBAC:
         "supervisor": RolUsuario.SUPERVISOR.value,
         "supervisorempresa": RolUsuario.SUPERVISOR_EMPRESA.value,
         "supervisor_empresa": RolUsuario.SUPERVISOR_EMPRESA.value,
+        "administrador dba": RolUsuario.ADMIN_DBA.value,
+        "administrador_dba": RolUsuario.ADMIN_DBA.value,
+        "admin_dba": RolUsuario.ADMIN_DBA.value,
+        "admindba": RolUsuario.ADMIN_DBA.value,
         "sistema": RolUsuario.SISTEMA.value,
     }
 
@@ -1129,6 +1137,45 @@ class AutorizadorRBAC:
                 RolUsuario.COORDINADOR.value,
                 RolUsuario.COORDINADOR_PRACTICAS.value,
             ],
+            operacion=operacion,
+            usuario_id=usuario_id,
+        )
+
+    def validar_migracion_excel(
+        self,
+        rol_actor: str,
+        usuario_id: Optional[str] = None,
+        operacion: str = "migrar_practicas_excel",
+    ) -> None:
+        """Valida las autorizaciones para ejecutar la migración inicial desde Excel (CU-15).
+
+        Traza: CU-15, Escenario 8, ADR-005 (política deny-by-default),
+        ADR-009 (Estrategia de migración inicial), RN-01, RN-03.
+
+        Verifica bajo política *deny-by-default* que el actor tenga identidad válida
+        (no vacía cuando se suministra) y posea exclusivamente el rol ``Administrador DBA``.
+        Cualquier intento por ``Estudiante``, ``DocenteAsesor``, ``SupervisorEmpresa``,
+        ``Coordinador de prácticas`` o sin sesión válida lanza ``AccesoDenegadoError``.
+
+        Args:
+            rol_actor: Rol presentado por el operador autenticado.
+            usuario_id: Identificador del operador autenticado (opcional).
+            operacion: Nombre de la operación evaluada ('migrar_practicas_excel').
+
+        Raises:
+            AccesoDenegadoError: Si el usuario_id es inválido o el rol no es Administrador DBA.
+        """
+        if usuario_id is not None and not str(usuario_id).strip():
+            raise AccesoDenegadoError(
+                "Acceso denegado: No se ha provisto una identidad de operador válida.",
+                rol_actor=rol_actor,
+                operacion=operacion,
+                usuario_id=usuario_id,
+            )
+
+        self.validar_rol(
+            rol_actor=rol_actor,
+            roles_permitidos=[RolUsuario.ADMIN_DBA.value],
             operacion=operacion,
             usuario_id=usuario_id,
         )
