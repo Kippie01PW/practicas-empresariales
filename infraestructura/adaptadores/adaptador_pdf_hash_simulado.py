@@ -1,16 +1,18 @@
-"""Adaptador simulado para almacenamiento en memoria de binarios PDF y cálculo de hash SHA-256.
+"""Adaptador simulado para almacenamiento en memoria de binarios PDF, renderizado de plantillas y cálculo de hash SHA-256.
 
-Traza: CU-09, CU-10, EAC-03, OB-05, PA-03, RN-02,
+Traza: CU-09, CU-10, CU-12, EAC-01, EAC-03, OB-05, PA-03, RN-02,
 ADR-002 (Monolito modular con Clean Architecture y Puertos y Adaptadores),
+ADR-007 (Configuración declarativa de reglas versionadas por programa),
 ADR-008 (Generación y preservación del acta final mediante plantillas y sellado criptográfico),
 Vista de Desarrollo §3 (03-desarrollo.md) y Vista de Procesos §2 (02-procesos.md).
 
-Implementa el puerto `ServicioPdfHashPort` simulando en memoria de forma determinista el
-componente "Adaptador PDF y Hash" y el "Repositorio de actas PDF" (volumen local `vol_pdf`).
-Permite almacenar binarios PDF, calcular y recalcular su huella criptográfica SHA-256
-(64 caracteres hexadecimales), verificar la integridad frente al `hashIntegridadSha256`
-registrado en `ActaFinal`, y simular escenarios de alteración o indisponibilidad del
-documento PDF (CU-10, Escenarios 1, 2 y 4).
+Implementa el puerto `ServicioPdfHashPort` y la simulación en memoria de `ServicioGeneradorActaPdfPort`
+simulando de forma determinista el componente "Adaptador PDF y Hash" y el "Repositorio de actas PDF"
+(volumen local `vol_pdf`). Permite almacenar binarios PDF, calcular y recalcular su huella criptográfica
+SHA-256 (64 caracteres hexadecimales), verificar la integridad frente al `hashIntegridadSha256`
+registrado en `ActaFinal`, simular escenarios de alteración o indisponibilidad del documento PDF
+(CU-10, Escenarios 1, 2 y 4) y previsualizar en memoria plantillas de actas de `ReglaPrograma` en
+estado `Borrador` sin persistirlas en el repositorio oficial (CU-12, Escenarios 3 y 10).
 """
 
 from __future__ import annotations
@@ -19,6 +21,10 @@ import hashlib
 import hmac
 from typing import Optional
 
+from aplicacion.dtos.acta_final_dto import (
+    DatosRenderizadoActaDTO,
+    ResultadoRenderizadoPdfDTO,
+)
 from aplicacion.puertos.servicio_pdf_hash import ServicioPdfHashPort
 from dominio.errores import IntegridadActaInvalidaError
 
@@ -184,3 +190,104 @@ class AdaptadorPdfHashSimulado(ServicioPdfHashPort):
     def limpiar(self) -> None:
         """Elimina todos los archivos PDF almacenados en memoria."""
         self._archivos_pdf.clear()
+
+    def simular_acta_pdf_en_memoria(
+        self,
+        datos: DatosRenderizadoActaDTO,
+    ) -> ResultadoRenderizadoPdfDTO:
+        """Renderiza en memoria la plantilla HTML/CSS a un binario PDF de prueba sin persistir en el repositorio oficial (CU-12).
+
+        Traza: CU-12, Escenarios 3 y 10, EAC-01, ADR-007, ADR-008.
+        Genera el documento HTML intermedio y el binario PDF de previsualización aplicando
+        `datos.plantilla_acta`, `datos.horas_requeridas` y `datos.respuestas_rubrica`, y calcula
+        su huella criptográfica SHA-256 de 64 caracteres hexadecimales sin escribir ninguna entrada
+        en `self._archivos_pdf` (garantizando 0 escrituras en el repositorio oficial de actas PDF).
+        """
+        html_renderizado = self._renderizar_plantilla_html(datos)
+        contenido_pdf = self._empaquetar_binario_pdf(datos, html_renderizado)
+        hash_sha256 = self.calcular_hash_sha256(contenido_pdf)
+        ruta_simulacion_memoria = f"memory://simulacion/{datos.numero_acta}.pdf"
+
+        return ResultadoRenderizadoPdfDTO(
+            ruta_archivo_pdf=ruta_simulacion_memoria,
+            contenido_pdf=contenido_pdf,
+            hash_integridad_sha256=hash_sha256,
+            plantilla_utilizada=datos.plantilla_acta,
+        )
+
+    def _renderizar_plantilla_html(self, datos: DatosRenderizadoActaDTO) -> str:
+        """Inyecta los datos consolidados de la práctica en la plantilla HTML/CSS de la ReglaPrograma (ADR-007, ADR-008)."""
+        concepto_desempeno = (
+            "APROBATORIA" if datos.es_aprobatoria else "REPROBATORIA"
+        )
+        observaciones_texto = (
+            datos.observaciones_evaluacion
+            if datos.observaciones_evaluacion
+            else "Sin observaciones adicionales."
+        )
+        criterios_rubrica = "; ".join(
+            f"{criterio}: {puntaje:.2f}"
+            for criterio, puntaje in sorted(datos.respuestas_rubrica.items())
+        )
+        fecha_iso = datos.fecha_emision.isoformat()
+
+        return (
+            "<!DOCTYPE html>\n"
+            "<html lang=\"es\">\n"
+            "<head>\n"
+            "  <meta charset=\"UTF-8\">\n"
+            f"  <meta name=\"template\" content=\"{datos.plantilla_acta}\">\n"
+            f"  <meta name=\"regla-programa-id\" content=\"{datos.regla_programa_id}\">\n"
+            f"  <meta name=\"regla-version\" content=\"{datos.version_regla}\">\n"
+            f"  <title>Acta Final de Práctica Empresarial - {datos.numero_acta}</title>\n"
+            "</head>\n"
+            "<body>\n"
+            f"  <h1>ACTA FINAL DE PRÁCTICA EMPRESARIAL - {datos.numero_acta}</h1>\n"
+            f"  <p><strong>Plantilla Aplicada:</strong> {datos.plantilla_acta} "
+            f"(Regla: {datos.regla_programa_id}, Versión: {datos.version_regla})</p>\n"
+            f"  <p><strong>Programa Académico:</strong> {datos.programa_academico}</p>\n"
+            f"  <p><strong>Identificador de Práctica:</strong> {datos.practica_id}</p>\n"
+            f"  <p><strong>Estudiante:</strong> {datos.estudiante_id}</p>\n"
+            f"  <p><strong>Docente Asesor:</strong> {datos.docente_asesor_id} - {datos.nombre_docente_asesor}</p>\n"
+            f"  <p><strong>Supervisor de Empresa:</strong> {datos.supervisor_empresa_id}</p>\n"
+            f"  <p><strong>Horas Aprobadas / Horas Requeridas:</strong> "
+            f"{datos.horas_acumuladas_aprobadas} / {datos.horas_requeridas}</p>\n"
+            f"  <p><strong>Calificación Cuantitativa:</strong> {datos.calificacion_cuantitativa:.2f} "
+            f"({concepto_desempeno})</p>\n"
+            f"  <p><strong>Detalle de Rúbrica:</strong> {criterios_rubrica}</p>\n"
+            f"  <p><strong>Observaciones de Evaluación:</strong> {observaciones_texto}</p>\n"
+            f"  <p><strong>Fecha de Emisión:</strong> {fecha_iso}</p>\n"
+            "</body>\n"
+            "</html>"
+        )
+
+    def _empaquetar_binario_pdf(
+        self,
+        datos: DatosRenderizadoActaDTO,
+        html_renderizado: str,
+    ) -> bytes:
+        """Construye un documento binario PDF determinista a partir del HTML renderizado."""
+        cuerpo_pdf = (
+            "%PDF-1.4\n"
+            f"% ActaFinal: {datos.numero_acta}\n"
+            f"% Practica: {datos.practica_id}\n"
+            f"% Plantilla: {datos.plantilla_acta} (Version: {datos.version_regla})\n"
+            "1 0 obj\n"
+            "<< /Type /Catalog /Pages 2 0 R >>\n"
+            "endobj\n"
+            "2 0 obj\n"
+            "<< /Type /Pages /Kids [3 0 R] /Count 1 >>\n"
+            "endobj\n"
+            "3 0 obj\n"
+            "<< /Type /Page /Parent 2 0 R /Contents 4 0 R >>\n"
+            "endobj\n"
+            "4 0 obj\n"
+            f"<< /Length {len(html_renderizado.encode('utf-8'))} >>\n"
+            "stream\n"
+            f"{html_renderizado}\n"
+            "endstream\n"
+            "endobj\n"
+            "%%EOF\n"
+        )
+        return cuerpo_pdf.encode("utf-8")
+

@@ -40,7 +40,7 @@
       Escenarios: 1, 2, 3, 4, 7, 8, 10
       Depende de: T-02, T-04
 
-- [ ] T-09 Implementar método simular_acta_pdf_en_memoria en adaptador AdaptadorPdfHashSimulado para previsualización sin persistencia en repositorio oficial
+- [X] T-09 Implementar método simular_acta_pdf_en_memoria en adaptador AdaptadorPdfHashSimulado para previsualización sin persistencia en repositorio oficial
       Archivos: infraestructura/adaptadores/adaptador_pdf_hash_simulado.py
       Escenarios: 3, 10
       Depende de: T-05
