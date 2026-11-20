@@ -1,6 +1,6 @@
 """Entidad raíz Practica y enumeración EstadoPractica.
 
-Traza: CU-01, CU-02, CU-03, CU-04, CU-05, CU-07, CU-10, ADR-010 (Máquina de Estados Finitos), ADR-007 (Reglas versionadas).
+Traza: CU-01, CU-02, CU-03, CU-04, CU-05, CU-07, CU-09, CU-10, ADR-010 (Máquina de Estados Finitos), ADR-007 (Reglas versionadas).
 
 La entidad ``Practica`` encapsula el ciclo de vida completo de una práctica
 empresarial mediante una máquina de estados finitos interna.  Solo se exponen
@@ -16,13 +16,17 @@ from enum import Enum
 from typing import Optional
 
 from dominio.errores import (
+    ActaFinalYaGeneradaError,
     ActaYaAprobadaPorActorError,
     DecisionPreviaEnFirmeError,
+    EstadoPracticaInvalidoParaActaError,
     EstadoPracticaInvalidoParaAprobarActaError,
     EstadoPracticaInvalidoParaEvaluacionError,
     EstadoPracticaInvalidoParaRegistroHorasError,
     EstadoPracticaInvalidoParaValidarHorasError,
+    EvaluacionDesempenoFaltanteParaActaError,
     FaltaAprobacionDocentePreviaError,
+    HorasInsuficientesParaActaError,
     MotivoRechazoRequeridoError,
     PracticaYaEvaluadaError,
     PracticaYaTieneTutorAsignadoError,
@@ -405,6 +409,77 @@ class Practica:
             self._fecha_fin = datetime.now()
 
     # -- Consultas de dominio -----------------------------------------------
+
+    def puede_generar_acta(
+        self,
+        horas_requeridas: int,
+        tiene_evaluacion: bool = True,
+        tiene_acta_previa: bool = False,
+    ) -> bool:
+        """Indica si la práctica cumple todos los requisitos para generar el acta final.
+
+        Traza: CU-09, Escenarios 1, 2, 3, 4, 5, 6 y 11, plan.md. ADR-007, ADR-008, ADR-010, RN-02.
+
+        Args:
+            horas_requeridas: Horas mínimas exigidas por la ReglaPrograma vinculada.
+            tiene_evaluacion: Indica si existe una EvaluacionDesempeno registrada.
+            tiene_acta_previa: Indica si la práctica ya tiene un ActaFinal emitida.
+
+        Returns:
+            True si la práctica está en Evaluada, no tiene acta previa, cuenta con evaluación
+            y acumula al menos las horas requeridas; False en caso contrario.
+        """
+        if tiene_acta_previa:
+            return False
+        if self._estado_actual != EstadoPractica.EVALUADA:
+            return False
+        if not tiene_evaluacion:
+            return False
+        if self._horas_acumuladas_aprobadas < horas_requeridas:
+            return False
+        return True
+
+    def validar_requisitos_generacion_acta(
+        self,
+        *,
+        horas_requeridas: int,
+        tiene_evaluacion: bool,
+        tiene_acta_previa: bool = False,
+    ) -> None:
+        """Valida los requisitos de la máquina de estados e invariantes para generar el ActaFinal.
+
+        Traza: CU-09, Escenarios 1, 2, 3, 4, 5, 6 y 11, plan.md. ADR-007, ADR-008, ADR-010, RN-02.
+
+        Args:
+            horas_requeridas: Horas mínimas exigidas por la ReglaPrograma vinculada a la práctica.
+            tiene_evaluacion: Indica si la práctica cuenta con una EvaluacionDesempeno registrada.
+            tiene_acta_previa: Indica si la práctica ya cuenta con un ActaFinal previamente generada.
+
+        Raises:
+            ActaFinalYaGeneradaError: Si la práctica ya cuenta con un ActaFinal emitida (Escenario 5).
+            EstadoPracticaInvalidoParaActaError: Si la práctica no está en estado Evaluada (Escenario 2).
+            EvaluacionDesempenoFaltanteParaActaError: Si falta la Evaluación de Desempeño (Escenario 4).
+            HorasInsuficientesParaActaError: Si las horas acumuladas aprobadas son menores a las
+                horas requeridas por la ReglaPrograma vinculada (Escenario 3).
+        """
+        if tiene_acta_previa:
+            raise ActaFinalYaGeneradaError(practica_id=self._id)
+
+        if self._estado_actual != EstadoPractica.EVALUADA:
+            raise EstadoPracticaInvalidoParaActaError(
+                estado_actual=self._estado_actual.value,
+                practica_id=self._id,
+            )
+
+        if not tiene_evaluacion:
+            raise EvaluacionDesempenoFaltanteParaActaError(practica_id=self._id)
+
+        if self._horas_acumuladas_aprobadas < horas_requeridas:
+            raise HorasInsuficientesParaActaError(
+                horas_acumuladas_aprobadas=self._horas_acumuladas_aprobadas,
+                horas_requeridas=horas_requeridas,
+                practica_id=self._id,
+            )
 
     def puede_aprobar_acta(self) -> bool:
         """Indica si la práctica se encuentra en el estado formal para aprobar electrónicamente el acta.

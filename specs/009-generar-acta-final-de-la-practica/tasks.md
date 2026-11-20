@@ -10,7 +10,7 @@
       Escenarios: 1, 5, 6, 11
       Depende de: T-01
 
-- [ ] T-03 Actualizar entidad Practica con método de validación de requisitos para generación de acta final (estado Evaluada, horas requeridas, evaluación y unicidad)
+- [X] T-03 Actualizar entidad Practica con método de validación de requisitos para generación de acta final (estado Evaluada, horas requeridas, evaluación y unicidad)
       Archivos: dominio/modelos/practica.py
       Escenarios: 1, 2, 3, 4, 5, 6, 11
       Depende de: T-01
