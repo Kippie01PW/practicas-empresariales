@@ -35,7 +35,7 @@
       Escenarios: 1, 2, 3, 4, 5, 6, 7, 8
       Depende de: T-05, T-06
 
-- [ ] T-08 Validar todos los escenarios de spec.md y generar validacion.md
+- [X] T-08 Validar todos los escenarios de spec.md y generar validacion.md
       Archivos: specs/015-migrar-practicas-en-curso-desde-excel/validacion.md
       Escenarios: 1, 2, 3, 4, 5, 6, 7, 8
       Depende de: T-07
