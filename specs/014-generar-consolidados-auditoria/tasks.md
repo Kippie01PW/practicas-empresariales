@@ -15,7 +15,7 @@
       Escenarios: 1, 2, 3, 4
       Depende de: ninguna
 
-- [ ] T-04 Ampliar puerto ServicioGeneradorActaPdfPort con el método generar_consolidado_auditoria_pdf para exportación en PDF con sellado SHA-256
+- [X] T-04 Ampliar puerto ServicioGeneradorActaPdfPort con el método generar_consolidado_auditoria_pdf para exportación en PDF con sellado SHA-256
       Archivos: aplicacion/puertos/servicio_generador_acta_pdf.py
       Escenarios: 1, 2, 3, 4
       Depende de: T-02

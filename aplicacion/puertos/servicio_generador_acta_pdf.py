@@ -22,6 +22,7 @@ from aplicacion.dtos.acta_final_dto import (
     DatosRenderizadoActaDTO,
     ResultadoRenderizadoPdfDTO,
 )
+from aplicacion.dtos.consolidado_auditoria_dto import DatosRenderizadoConsolidadoPdfDTO
 
 
 @runtime_checkable
@@ -110,5 +111,23 @@ class ServicioGeneradorActaPdfPort(Protocol):
         Returns:
             DTO inmutable ResultadoRenderizadoPdfDTO con contenido_pdf, hash_integridad_sha256 y
             plantilla_utilizada generados exclusivamente en memoria.
+        """
+        ...
+
+    def generar_consolidado_auditoria_pdf(
+        self, datos: DatosRenderizadoConsolidadoPdfDTO
+    ) -> tuple[bytes, str]:
+        """Renderiza en PDF el consolidado histórico de prácticas y sus actas finales con sellado SHA-256 (CU-14).
+
+        Genera el documento exportable en formato PDF con los metadatos de filtro, totales
+        resumidos y el detalle de cada práctica y su ActaFinal asociada (incluyendo el caso
+        de 0 registros coincidentes) y calcula la huella criptográfica SHA-256 sobre el binario.
+
+        Args:
+            datos: DTO inmutable DatosRenderizadoConsolidadoPdfDTO con filtros, totales y registros.
+
+        Returns:
+            Tupla `(contenido_pdf, hash_sha256)` con el binario PDF generado y su huella SHA-256
+            de 64 caracteres hexadecimales.
         """
         ...
