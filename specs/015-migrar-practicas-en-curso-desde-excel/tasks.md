@@ -5,7 +5,7 @@
       Escenarios: 1, 2, 3
       Depende de: ninguna
 
-- [ ] T-02 Crear DTOs inmutables para fila de plantilla normalizada, comando de migración, resultado por fila y respuesta consolidada
+- [X] T-02 Crear DTOs inmutables para fila de plantilla normalizada, comando de migración, resultado por fila y respuesta consolidada
       Archivos: aplicacion/dtos/migracion_excel_dto.py
       Escenarios: 1, 2, 3, 4, 5, 6, 7
       Depende de: ninguna
