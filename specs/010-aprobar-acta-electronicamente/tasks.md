@@ -50,7 +50,7 @@
       Escenarios: 1, 2, 3, 4, 5, 6
       Depende de: T-02, T-05
 
-- [ ] T-11 Implementar adaptador simulado AdaptadorPdfHashSimulado para almacenamiento en memoria de binarios PDF y cálculo de hash SHA-256
+- [X] T-11 Implementar adaptador simulado AdaptadorPdfHashSimulado para almacenamiento en memoria de binarios PDF y cálculo de hash SHA-256
       Archivos: infraestructura/adaptadores/adaptador_pdf_hash_simulado.py
       Escenarios: 1, 2, 4
       Depende de: T-06
