@@ -45,7 +45,7 @@
       Escenarios: 3, 10
       Depende de: T-05
 
-- [ ] T-10 Integrar ConfigurarReglasProgramaCasoUso y simulación en memoria de plantillas en el punto de composición main.py
+- [X] T-10 Integrar ConfigurarReglasProgramaCasoUso y simulación en memoria de plantillas en el punto de composición main.py
       Archivos: main.py
       Escenarios: 1, 2, 3, 4, 5, 6, 7, 8, 9, 10
       Depende de: T-07, T-08, T-09

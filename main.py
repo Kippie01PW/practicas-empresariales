@@ -33,6 +33,9 @@ from aplicacion.casos_uso.aprobar_acta_electronicamente import (
     AprobarActaElectronicamenteCasoUso,
 )
 from aplicacion.casos_uso.asignar_docente_asesor import AsignarDocenteAsesorCasoUso
+from aplicacion.casos_uso.configurar_reglas_programa import (
+    ConfigurarReglasProgramaCasoUso,
+)
 from aplicacion.casos_uso.consultar_estado_tramite import ConsultarEstadoTramiteCasoUso
 from aplicacion.casos_uso.enviar_recordatorios_plazos import (
     EnviarRecordatoriosPlazosCasoUso,
@@ -90,6 +93,15 @@ from aplicacion.dtos.recordatorio_plazos_dto import (
 from aplicacion.dtos.registro_horas_dto import (
     RegistrarHorasComando,
     RegistroHorasRespuestaDTO,
+)
+from aplicacion.dtos.regla_programa_dto import (
+    ActivarReglaProgramaComando,
+    CrearBorradorReglaComando,
+    EditarBorradorReglaComando,
+    EliminarReglaProgramaComando,
+    ReglaProgramaRespuestaDTO,
+    SimulacionReglaProgramaRespuestaDTO,
+    SimularReglaProgramaComando,
 )
 from aplicacion.dtos.validacion_horas_dto import (
     ValidacionHorasRespuestaDTO,
@@ -169,6 +181,27 @@ class AdaptadorPdfYHashSimulado(AdaptadorPdfHashSimulado, ServicioGeneradorActaP
 
         return ResultadoRenderizadoPdfDTO(
             ruta_archivo_pdf=ruta_archivo_pdf,
+            contenido_pdf=contenido_pdf,
+            hash_integridad_sha256=hash_sha256,
+            plantilla_utilizada=datos.plantilla_acta,
+        )
+
+    def simular_acta_pdf_en_memoria(
+        self,
+        datos: DatosRenderizadoActaDTO,
+    ) -> ResultadoRenderizadoPdfDTO:
+        """Renderiza en memoria la plantilla HTML/CSS a un binario PDF de prueba sin persistir en el repositorio oficial (CU-12).
+
+        Garantiza 0 escrituras en `self._archivos_pdf` y en `self._html_renderizados` durante la
+        simulación y previsualización de una ReglaPrograma en estado Borrador (Escenarios 3 y 10).
+        """
+        html_renderizado = self._renderizar_plantilla_html(datos)
+        contenido_pdf = self._empaquetar_binario_pdf(datos, html_renderizado)
+        hash_sha256 = self.calcular_hash_sha256(contenido_pdf)
+        ruta_simulacion_memoria = f"memory://simulacion/{datos.numero_acta}.pdf"
+
+        return ResultadoRenderizadoPdfDTO(
+            ruta_archivo_pdf=ruta_simulacion_memoria,
             contenido_pdf=contenido_pdf,
             hash_integridad_sha256=hash_sha256,
             plantilla_utilizada=datos.plantilla_acta,
@@ -316,6 +349,7 @@ class SistemaPracticasEmpresariales:
     caso_uso_generar_acta: GenerarActaFinalCasoUso
     caso_uso_aprobar_acta: AprobarActaElectronicamenteCasoUso
     caso_uso_consultar_estado_tramite: ConsultarEstadoTramiteCasoUso
+    caso_uso_configurar_reglas: ConfigurarReglasProgramaCasoUso
 
     # Componentes de seguridad y autorización
     autorizador_rbac: AutorizadorRBAC
@@ -535,6 +569,13 @@ def inicializar_sistema(
         autorizador_rbac=autorizador_rbac,
     )
 
+    caso_uso_configurar_reglas = ConfigurarReglasProgramaCasoUso(
+        repositorio_regla=repo_regla,
+        repositorio_practica=repo_practica,
+        servicio_pdf=servicio_pdf,
+        autorizador_rbac=autorizador_rbac,
+    )
+
     return SistemaPracticasEmpresariales(
         caso_uso_postular=caso_uso_postular,
         caso_uso_reintentar_sia=caso_uso_reintentar_sia,
@@ -548,6 +589,7 @@ def inicializar_sistema(
         caso_uso_generar_acta=caso_uso_generar_acta,
         caso_uso_aprobar_acta=caso_uso_aprobar_acta,
         caso_uso_consultar_estado_tramite=caso_uso_consultar_estado_tramite,
+        caso_uso_configurar_reglas=caso_uso_configurar_reglas,
         autorizador_rbac=autorizador_rbac,
         proveedor_identidad=proveedor_identidad,
         interceptor_identidad=interceptor_identidad,
@@ -599,7 +641,8 @@ def main() -> int:
     print("                                EnviarRecordatoriosPlazosCasoUso (CU-08),")
     print("                                GenerarActaFinalCasoUso (CU-09),")
     print("                                AprobarActaElectronicamenteCasoUso (CU-10),")
-    print("                                ConsultarEstadoTramiteCasoUso (CU-11)")
+    print("                                ConsultarEstadoTramiteCasoUso (CU-11),")
+    print("                                ConfigurarReglasProgramaCasoUso (CU-12)")
 
     # Demostración del Escenario 1: Postulación exitosa
     print("\n--- Demostración CU-01: Postulación exitosa (Escenario 1) ---")
@@ -948,6 +991,97 @@ def main() -> int:
 
     eventos = sistema.repositorio_practica.buscar_eventos_por_entidad(f"Practica:{respuesta.practica_id}")
     print(f"Total eventos en bitácora:     {len(eventos)}")
+
+    # Demostración CU-12: Configurar reglas y plantillas por programa (Borrador -> Edición -> Simulación -> Activación)
+    print("\n--- Demostración CU-12: Configurar Reglas y Plantillas por Programa (Escenarios 1, 2, 3, 4 y 10) ---")
+    comando_crear_borrador = CrearBorradorReglaComando(
+        programa_academico="Ingeniería de Sistemas",
+        version="2026-2",
+        horas_requeridas=360,
+        criterios_rubrica={
+            "dominio_tecnico": 0.40,
+            "trabajo_en_equipo": 0.30,
+            "cumplimiento_objetivos": 0.30,
+        },
+        plantilla_acta="plantilla_acta_sistemas_v2.html",
+        actor_id="COORD-001",
+        rol_actor="Coordinador de prácticas",
+        ip_origen="192.168.1.50",
+    )
+    borrador_creado: ReglaProgramaRespuestaDTO = (
+        sistema.caso_uso_configurar_reglas.crear_borrador(comando_crear_borrador)
+    )
+    print(
+        f"1. Borrador creado:   ID={borrador_creado.regla_id}, v{borrador_creado.version}, "
+        f"estado={borrador_creado.estado_vigencia}, horas={borrador_creado.horas_requeridas}h"
+    )
+
+    comando_editar_borrador = EditarBorradorReglaComando(
+        regla_id=borrador_creado.regla_id,
+        actor_id="COORD-001",
+        rol_actor="Coordinador de prácticas",
+        horas_requeridas=380,
+        criterios_rubrica=[
+            "dominio_tecnico",
+            "trabajo_en_equipo",
+            "cumplimiento_objetivos",
+            "innovacion",
+        ],
+        plantilla_acta="plantilla_acta_sistemas_v2_rev1.html",
+        ip_origen="192.168.1.50",
+    )
+    borrador_editado: ReglaProgramaRespuestaDTO = (
+        sistema.caso_uso_configurar_reglas.editar_borrador(comando_editar_borrador)
+    )
+    print(
+        f"2. Borrador editado:  horas={borrador_editado.horas_requeridas}h, "
+        f"criterios={list(borrador_editado.nombres_criterios)}, "
+        f"plantilla={borrador_editado.plantilla_acta}"
+    )
+
+    archivos_antes_sim = sistema.servicio_pdf.cantidad_archivos_almacenados()
+    comando_simular = SimularReglaProgramaComando(
+        regla_id=borrador_editado.regla_id,
+        actor_id="COORD-001",
+        rol_actor="Coordinador de prácticas",
+        ip_origen="192.168.1.50",
+    )
+    simulacion_dto: SimulacionReglaProgramaRespuestaDTO = (
+        sistema.caso_uso_configurar_reglas.simular_previsualizacion(comando_simular)
+    )
+    archivos_despues_sim = sistema.servicio_pdf.cantidad_archivos_almacenados()
+    print(
+        f"3. Simulación PDF:    plantilla={simulacion_dto.plantilla_utilizada}, "
+        f"bytes={len(simulacion_dto.contenido_pdf_simulacion)}, "
+        f"persistido={simulacion_dto.persistido_en_repositorio} "
+        f"(archivos repo: {archivos_antes_sim}->{archivos_despues_sim})"
+    )
+
+    comando_activar = ActivarReglaProgramaComando(
+        regla_id=borrador_editado.regla_id,
+        actor_id="COORD-001",
+        rol_actor="Coordinador de prácticas",
+        ip_origen="192.168.1.50",
+    )
+    regla_activada: ReglaProgramaRespuestaDTO = (
+        sistema.caso_uso_configurar_reglas.activar_regla(comando_activar)
+    )
+    practica_previa = sistema.repositorio_practica.buscar_por_id(respuesta.practica_id or "")
+    regla_practica_previa = (
+        sistema.repositorio_regla.buscar_por_id(practica_previa.regla_programa_id)
+        if practica_previa
+        else None
+    )
+    print(
+        f"4. Regla activada:    v{regla_activada.version} ({regla_activada.estado_vigencia}), "
+        f"anterior v{regla_activada.version_anterior_inactivada} -> Inactiva"
+    )
+    if regla_practica_previa:
+        print(
+            f"5. Inmutabilidad:     Práctica previa conserva Regla v{regla_practica_previa.version} "
+            f"({regla_practica_previa.horas_requeridas}h, {regla_practica_previa.plantilla_acta}) "
+            f"-> 0% de alteración (EAC-01)"
+        )
 
     print("\n[OK] El sistema de gestión de prácticas está listo y operativo.")
     return 0
