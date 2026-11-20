@@ -1,14 +1,14 @@
 """Componente centralizado de autorización basada en roles (RBAC) en la capa de Aplicación.
 
-Traza: CU-01, CU-02, CU-03, CU-04, CU-05, CU-06, RN-01, RN-03, PA-02, ADR-002, ADR-004, ADR-005,
+Traza: CU-01, CU-02, CU-03, CU-04, CU-05, CU-06, CU-07, RN-01, RN-03, PA-02, ADR-002, ADR-004, ADR-005,
 Vista Lógica §2, Vista de Desarrollo §2.
 
 Implementa la política de autorización RBAC centralizada y contextual (Context-Based Access Control)
 bajo la regla 'deny-by-default' (ADR-005). Valida tanto el rol del actor autenticado como la
 pertenencia de los recursos según la identidad del usuario (e.g. un estudiante solo puede postularse
-a sí mismo y ver sus datos, RN-01; un supervisor solo puede validar horas de su práctica asignada,
-RN-01, CU-05; un docente asesor solo puede revisar avances de horas de sus practicantes asignados,
-RN-01, CU-06).
+a sí mismo y ver sus datos, RN-01; un supervisor solo puede validar horas y evaluar desempeño de su
+práctica asignada, RN-01, CU-05, CU-07; un docente asesor solo puede revisar avances de horas de sus
+practicantes asignados, RN-01, CU-06).
 """
 
 from __future__ import annotations
@@ -674,5 +674,36 @@ class AutorizadorRBAC:
                     operacion=operacion,
                     usuario_id=contexto.usuario_id,
                 )
+
+    def validar_evaluacion_desempeno(
+        self,
+        rol_actor: str,
+        usuario_id: Optional[str] = None,
+        operacion: str = "evaluar_desempeno",
+    ) -> None:
+        """Valida las autorizaciones específicas para el caso de uso de evaluación de desempeño (CU-07).
+
+        Asegura que el actor posea estrictamente el rol ``SupervisorEmpresa`` o ``Supervisor``
+        bajo política deny-by-default (ADR-005, EAC-03, RN-03). Cualquier intento por roles
+        internos (Estudiante, DocenteAsesor, Coordinador de prácticas) es denegado.
+
+        Args:
+            rol_actor: Rol presentado por el usuario autenticado.
+            usuario_id: Identificador del usuario (opcional).
+            operacion: Nombre de la operación evaluada ('evaluar_desempeno').
+
+        Raises:
+            AccesoDenegadoError: Si el rol del actor no es Supervisor o SupervisorEmpresa.
+        """
+        self.validar_rol(
+            rol_actor=rol_actor,
+            roles_permitidos=[
+                RolUsuario.SUPERVISOR.value,
+                RolUsuario.SUPERVISOR_EMPRESA.value,
+            ],
+            operacion=operacion,
+            usuario_id=usuario_id,
+        )
+
 
 

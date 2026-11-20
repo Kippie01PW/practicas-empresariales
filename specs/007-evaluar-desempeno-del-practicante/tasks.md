@@ -25,7 +25,7 @@
       Escenarios: 2, 3, 4, 12
       Depende de: T-02
 
-- [ ] T-06 Configurar método de autorización RBAC deny-by-default para evaluar desempeño por SupervisorEmpresa
+- [X] T-06 Configurar método de autorización RBAC deny-by-default para evaluar desempeño por SupervisorEmpresa
       Archivos: aplicacion/seguridad/autorizador_rbac.py
       Escenarios: 13, 14, 15
       Depende de: ninguna
