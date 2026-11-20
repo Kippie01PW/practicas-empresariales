@@ -59,7 +59,7 @@ Abre un **Chat Nuevo** para definir el caso de uso:
 ```text
 Antes de hacer cualquier cosa, lee estos archivos:
 1. AGENTS.md
-2. docs/drivers.md (sección correspondiente a CU-<XX>)
+2. docs/arquitectura.md. (sección correspondiente a CU-<XX>)
 
 Resume en tres líneas las reglas que vas a respetar.
 
@@ -91,7 +91,7 @@ En el mismo chat, tras revisar `plan.md`:
 
 ```text
 Antes de hacer cualquier cosa, lee estos archivos:
-1. AGENTS.md
+1. AGENTS.md y docs/arquitectura.md.
 2. specs/<NNN-nombre-caso-uso>/spec.md
 3. specs/<NNN-caso-uso>/plan.md
 
@@ -125,7 +125,7 @@ Para **CADA** tarea listada en `tasks.md` (`T-01`, `T-02`, `T-03`, etc.):
 
 ```text
 Antes de hacer cualquier cosa, lee estos archivos:
-1. AGENTS.md
+1. AGENTS.md y docs/arquitectura.md.
 2. specs/<NNN-nombre-caso-uso>/spec.md
 3. specs/<NNN-nombre-caso-uso>/plan.md
 4. specs/<NNN-nombre-caso-uso>/tasks.md
@@ -161,7 +161,7 @@ Para la última tarea (habitualmente `T-n: Validar todos los escenarios de spec.
 
 ```text
 Antes de hacer cualquier cosa, lee estos archivos:
-1. AGENTS.md
+1. AGENTS.md y docs/arquitectura.md.
 2. specs/<NNN-nombre-caso-uso>/spec.md
 3. specs/<NNN-nombre-caso-uso>/plan.md
 4. specs/<NNN-nombre-caso-uso>/tasks.md
