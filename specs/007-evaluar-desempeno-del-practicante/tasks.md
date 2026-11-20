@@ -20,7 +20,7 @@
       Escenarios: 1, 2, 3, 4, 16
       Depende de: ninguna
 
-- [ ] T-05 Definir puerto de repositorio RepositorioEvaluacionDesempenoPort para persistencia y consulta por práctica
+- [X] T-05 Definir puerto de repositorio RepositorioEvaluacionDesempenoPort para persistencia y consulta por práctica
       Archivos: aplicacion/puertos/repositorio_evaluacion_desempeno.py
       Escenarios: 2, 3, 4, 12
       Depende de: T-02
