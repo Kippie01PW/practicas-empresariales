@@ -10,7 +10,7 @@
       Escenarios: 6, 14
       Depende de: ninguna
 
-- [ ] T-03 Configurar reglas de autorización RBAC y pertenencia contextual docente-práctica y estudiante-práctica para CU-06
+- [X] T-03 Configurar reglas de autorización RBAC y pertenencia contextual docente-práctica y estudiante-práctica para CU-06
       Archivos: aplicacion/seguridad/autorizador_rbac.py
       Escenarios: 1, 2, 6, 7, 8, 9, 11, 12
       Depende de: ninguna
