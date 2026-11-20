@@ -30,7 +30,7 @@
       Escenarios: 1, 6, 10, 11
       Depende de: T-04
 
-- [ ] T-07 Configurar método de autorización RBAC deny-by-default para generación de acta final por DocenteAsesor
+- [X] T-07 Configurar método de autorización RBAC deny-by-default para generación de acta final por DocenteAsesor
       Archivos: aplicacion/seguridad/autorizador_rbac.py
       Escenarios: 1, 7, 8, 12
       Depende de: ninguna

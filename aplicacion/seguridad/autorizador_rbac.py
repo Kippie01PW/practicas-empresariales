@@ -1,14 +1,14 @@
 """Componente centralizado de autorización basada en roles (RBAC) en la capa de Aplicación.
 
-Traza: CU-01, CU-02, CU-03, CU-04, CU-05, CU-06, CU-07, RN-01, RN-03, PA-02, ADR-002, ADR-004, ADR-005,
+Traza: CU-01, CU-02, CU-03, CU-04, CU-05, CU-06, CU-07, CU-08, CU-09, RN-01, RN-03, PA-02, ADR-002, ADR-004, ADR-005,
 Vista Lógica §2, Vista de Desarrollo §2.
 
 Implementa la política de autorización RBAC centralizada y contextual (Context-Based Access Control)
 bajo la regla 'deny-by-default' (ADR-005). Valida tanto el rol del actor autenticado como la
 pertenencia de los recursos según la identidad del usuario (e.g. un estudiante solo puede postularse
 a sí mismo y ver sus datos, RN-01; un supervisor solo puede validar horas y evaluar desempeño de su
-práctica asignada, RN-01, CU-05, CU-07; un docente asesor solo puede revisar avances de horas de sus
-practicantes asignados, RN-01, CU-06).
+práctica asignada, RN-01, CU-05, CU-07; un docente asesor solo puede revisar avances de horas y generar
+el acta final de sus practicantes asignados, RN-01, CU-06, CU-09).
 """
 
 from __future__ import annotations
@@ -744,6 +744,54 @@ class AutorizadorRBAC:
             operacion=operacion,
             usuario_id=usuario_id,
         )
+
+    def validar_generacion_acta(
+        self,
+        rol_actor: str,
+        usuario_id: Optional[str] = None,
+        operacion: str = "generar_acta",
+    ) -> None:
+        """Valida las autorizaciones específicas para la generación del acta final (CU-09).
+
+        Traza: CU-09, Escenarios 1, 7, 8 y 12, ADR-005, EAC-03, RN-01, RN-03.
+        Asegura bajo política deny-by-default que exclusivamente el rol ``DocenteAsesor``
+        (o ``Docente``) pueda invocar la generación del acta final. Cualquier intento por
+        Estudiante, SupervisorEmpresa o Coordinador de prácticas es denegado.
+
+        Args:
+            rol_actor: Rol presentado por el usuario autenticado.
+            usuario_id: Identificador del usuario (opcional).
+            operacion: Nombre de la operación evaluada ('generar_acta').
+
+        Raises:
+            AccesoDenegadoError: Si el rol del actor no es Docente o DocenteAsesor.
+        """
+        self.validar_rol(
+            rol_actor=rol_actor,
+            roles_permitidos=[
+                RolUsuario.DOCENTE.value,
+                RolUsuario.DOCENTE_ASESOR.value,
+            ],
+            operacion=operacion,
+            usuario_id=usuario_id,
+        )
+
+    def autorizar_comando_generar_acta(
+        self,
+        comando: Any,
+    ) -> None:
+        """Valida un comando de generación de acta final (GenerarActaFinalComando).
+
+        Aplica política deny-by-default verificando que rol_actor sea DocenteAsesor (o Docente).
+        """
+        rol = getattr(comando, "rol_actor", None)
+        actor_id = getattr(comando, "actor_id", None)
+        self.validar_generacion_acta(
+            rol_actor=rol,
+            usuario_id=actor_id,
+            operacion="generar_acta",
+        )
+
 
 
 
