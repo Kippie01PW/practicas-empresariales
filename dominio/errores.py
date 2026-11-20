@@ -1590,6 +1590,56 @@ class ReglaProgramaInmutableError(ErrorDominio):
         )
 
 
+# ---------------------------------------------------------------------------
+# CU-14: Excepciones para generación de consolidados de auditoría y
+#        validación de filtros de consulta histórica (ADR-002, ADR-006)
+# ---------------------------------------------------------------------------
+
+
+class FiltrosConsolidadoInvalidosError(ErrorDominio):
+    """Excepción lanzada cuando los filtros del consolidado de auditoría son inválidos o incompletos.
+
+    Traza: CU-14, Escenario 5 (Rechazo de generación de consolidado por ausencia de filtros
+    obligatorios o rango de fechas inválido), ADR-002.
+
+    Los filtros obligatorios son 'programaAcademico' y 'periodo'. Además, si se suministran
+    fechas opcionales, 'fechaInicio' no puede ser posterior a 'fechaFin', y si se indica
+    'estadoPractica', debe corresponder a un estado formal válido del ciclo de vida.
+    """
+
+    def __init__(
+        self,
+        campo: Optional[str] = None,
+        detalle: Optional[str] = None,
+        mensaje: Optional[str] = None,
+    ) -> None:
+        self.campo: Optional[str] = campo
+        self.detalle: Optional[str] = detalle
+
+        if mensaje is None:
+            if detalle:
+                mensaje = detalle
+            elif campo:
+                mensaje = (
+                    f"El filtro obligatorio '{campo}' para generar el consolidado de auditoría "
+                    f"no puede estar vacío."
+                )
+            else:
+                mensaje = (
+                    "Los filtros indicados para generar el consolidado de auditoría son inválidos."
+                )
+
+        super().__init__(mensaje)
+
+    def __repr__(self) -> str:
+        return (
+            f"FiltrosConsolidadoInvalidosError("
+            f"campo={self.campo!r}, "
+            f"detalle={self.detalle!r})"
+        )
+
+
+
 
 
 

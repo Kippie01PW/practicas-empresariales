@@ -1,6 +1,6 @@
 # Tareas: 014 Generar consolidados para auditoría
 
-- [ ] T-01 Incorporar excepción de dominio FiltrosConsolidadoInvalidosError para validación de filtros obligatorios y rango de fechas
+- [X] T-01 Incorporar excepción de dominio FiltrosConsolidadoInvalidosError para validación de filtros obligatorios y rango de fechas
       Archivos: dominio/errores.py
       Escenarios: 5
       Depende de: ninguna
