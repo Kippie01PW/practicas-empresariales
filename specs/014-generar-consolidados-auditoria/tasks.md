@@ -5,7 +5,7 @@
       Escenarios: 5
       Depende de: ninguna
 
-- [ ] T-02 Crear DTOs inmutables para comando de consulta, registro consolidado, datos de renderizado PDF y respuesta de consolidado de auditoría
+- [X] T-02 Crear DTOs inmutables para comando de consulta, registro consolidado, datos de renderizado PDF y respuesta de consolidado de auditoría
       Archivos: aplicacion/dtos/consolidado_auditoria_dto.py
       Escenarios: 1, 2, 3, 4
       Depende de: ninguna
