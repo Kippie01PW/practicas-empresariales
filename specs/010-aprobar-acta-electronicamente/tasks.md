@@ -15,7 +15,7 @@
       Escenarios: 2, 3, 5, 6
       Depende de: T-01
 
-- [ ] T-04 Crear DTOs inmutables para comando de aprobación electrónica de acta y respuesta de CU-10
+- [X] T-04 Crear DTOs inmutables para comando de aprobación electrónica de acta y respuesta de CU-10
       Archivos: aplicacion/dtos/aprobacion_acta_dto.py
       Escenarios: 1, 2
       Depende de: ninguna
