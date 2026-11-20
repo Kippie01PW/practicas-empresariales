@@ -46,6 +46,7 @@ from aplicacion.casos_uso.generar_acta_final import GenerarActaFinalCasoUso
 from aplicacion.casos_uso.generar_consolidados_auditoria import (
     GenerarConsolidadosAuditoriaCasoUso,
 )
+from aplicacion.casos_uso.migrar_practicas_excel import MigrarPracticasExcelCasoUso
 from aplicacion.casos_uso.monitorear_practicas import MonitorearPracticasCasoUso
 from aplicacion.casos_uso.postular_estudiante import PostularEstudianteCasoUso
 from aplicacion.casos_uso.registrar_horas import RegistrarHorasCasoUso
@@ -89,6 +90,10 @@ from aplicacion.dtos.evaluacion_desempeno_dto import (
 from aplicacion.dtos.evaluacion_postulacion_dto import (
     EvaluacionPostulacionRespuestaDTO,
     EvaluarPostulacionComando,
+)
+from aplicacion.dtos.migracion_excel_dto import (
+    MigrarPracticasExcelComando,
+    MigrarPracticasExcelRespuestaDTO,
 )
 from aplicacion.dtos.monitoreo_practicas_dto import (
     ConsultarDetallePracticaMonitoreoComando,
@@ -134,6 +139,9 @@ from infraestructura.adaptadores.adaptador_pdf_hash_simulado import (
 )
 from infraestructura.adaptadores.broker_memoria import InMemoryBrokerMensajes
 from infraestructura.adaptadores.cliente_sia_simulado import AdaptadorSiaSimulado
+from infraestructura.adaptadores.lector_plantilla_excel_simulado import (
+    LectorPlantillaExcelSimulado,
+)
 from infraestructura.adaptadores.repositorio_memoria import (
     InMemoryRepositorioActaFinal,
     InMemoryRepositorioDocente,
@@ -366,6 +374,7 @@ class SistemaPracticasEmpresariales:
     caso_uso_configurar_reglas: ConfigurarReglasProgramaCasoUso
     caso_uso_monitorear_practicas: MonitorearPracticasCasoUso
     caso_uso_generar_consolidados: GenerarConsolidadosAuditoriaCasoUso
+    caso_uso_migrar_practicas_excel: MigrarPracticasExcelCasoUso
 
     # Componentes de seguridad y autorización
     autorizador_rbac: AutorizadorRBAC
@@ -386,6 +395,7 @@ class SistemaPracticasEmpresariales:
     servicio_sia: AdaptadorSiaSimulado
     broker_mensajes: InMemoryBrokerMensajes
     servicio_correo: AdaptadorCorreoSimulado
+    lector_plantilla_excel: LectorPlantillaExcelSimulado
 
 
 def inicializar_sistema(
@@ -612,6 +622,15 @@ def inicializar_sistema(
         autorizador_rbac=autorizador_rbac,
     )
 
+    lector_plantilla_excel = LectorPlantillaExcelSimulado()
+    caso_uso_migrar_practicas_excel = MigrarPracticasExcelCasoUso(
+        lector_plantilla=lector_plantilla_excel,
+        repositorio_practica=repo_practica,
+        repositorio_docente=repo_docente,
+        repositorio_regla=repo_regla,
+        autorizador_rbac=autorizador_rbac,
+    )
+
     return SistemaPracticasEmpresariales(
         caso_uso_postular=caso_uso_postular,
         caso_uso_reintentar_sia=caso_uso_reintentar_sia,
@@ -628,6 +647,7 @@ def inicializar_sistema(
         caso_uso_configurar_reglas=caso_uso_configurar_reglas,
         caso_uso_monitorear_practicas=caso_uso_monitorear_practicas,
         caso_uso_generar_consolidados=caso_uso_generar_consolidados,
+        caso_uso_migrar_practicas_excel=caso_uso_migrar_practicas_excel,
         autorizador_rbac=autorizador_rbac,
         proveedor_identidad=proveedor_identidad,
         interceptor_identidad=interceptor_identidad,
@@ -644,6 +664,7 @@ def inicializar_sistema(
         servicio_sia=servicio_sia,
         broker_mensajes=broker_mensajes,
         servicio_correo=servicio_correo,
+        lector_plantilla_excel=lector_plantilla_excel,
     )
 
 
@@ -1183,6 +1204,50 @@ def main() -> int:
     )
     print(f"SHA-256 PDF:          {respuesta_consolidado.hash_sha256_pdf}")
     print(f"Mensaje consolidado:  {respuesta_consolidado.mensaje}")
+
+    print("\n--- Demo rápida CU-15: Migrar prácticas en curso desde Excel ---")
+    csv_demo_migracion = (
+        "documento_estudiante,nombre_estudiante,correo_estudiante,programa_academico,"
+        "nombre_empresa,nit_empresa,supervisor_nombre,supervisor_correo,docente_asesor_id,"
+        "horas_acumuladas,estado_o_hito,fecha_postulacion,fecha_inicio,fecha_fin\n"
+        "1053890001,Laura Méndez,laura.mendez@ucaldas.edu.co,Ingeniería de Sistemas,"
+        "TechCaldas S.A.S,900111222-1,Carlos Ruiz,cruiz@techcaldas.co,doc_001,"
+        "120,Aprobada,2026-02-01,,\n"
+    )
+    sistema.lector_plantilla_excel.registrar_lote("lote_demo_cu15", csv_demo_migracion)
+    resp_dry_run: MigrarPracticasExcelRespuestaDTO = (
+        sistema.caso_uso_migrar_practicas_excel(
+            MigrarPracticasExcelComando(
+                origen_datos="lote_demo_cu15",
+                dry_run=True,
+                actor_id="DBA-001",
+                rol_actor="Administrador DBA",
+                ip_origen="127.0.0.1",
+            )
+        )
+    )
+    print(
+        f"Dry-Run CU-15:        validas={resp_dry_run.total_validas}, "
+        f"importadas={resp_dry_run.total_importadas}, "
+        f"rechazadas={resp_dry_run.total_rechazadas}"
+    )
+    resp_migracion: MigrarPracticasExcelRespuestaDTO = (
+        sistema.caso_uso_migrar_practicas_excel(
+            MigrarPracticasExcelComando(
+                origen_datos="lote_demo_cu15",
+                dry_run=False,
+                actor_id="DBA-001",
+                rol_actor="Administrador DBA",
+                ip_origen="127.0.0.1",
+            )
+        )
+    )
+    print(
+        f"Migración CU-15:      importadas={resp_migracion.total_importadas}, "
+        f"omitidas={resp_migracion.total_omitidas_duplicadas}, "
+        f"rechazadas={resp_migracion.total_rechazadas} | "
+        f"Estado={resp_migracion.resultados_filas[0].estado_practica_asignado}"
+    )
 
     print("\n[OK] El sistema de gestión de prácticas está listo y operativo.")
     return 0

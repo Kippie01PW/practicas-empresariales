@@ -30,7 +30,7 @@
       Escenarios: 1, 2, 3, 4, 5, 6, 7
       Depende de: T-01, T-02, T-03
 
-- [ ] T-07 Integrar MigrarPracticasExcelCasoUso y LectorPlantillaExcelSimulado en el punto de composición main.py
+- [X] T-07 Integrar MigrarPracticasExcelCasoUso y LectorPlantillaExcelSimulado en el punto de composición main.py
       Archivos: main.py
       Escenarios: 1, 2, 3, 4, 5, 6, 7, 8
       Depende de: T-05, T-06
