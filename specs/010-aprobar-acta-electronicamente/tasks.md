@@ -20,7 +20,7 @@
       Escenarios: 1, 2
       Depende de: ninguna
 
-- [ ] T-05 Definir puerto RepositorioActaFinalPort para persistencia y consulta de ActaFinal por identificador y por práctica
+- [X] T-05 Definir puerto RepositorioActaFinalPort para persistencia y consulta de ActaFinal por identificador y por práctica
       Archivos: aplicacion/puertos/repositorio_acta_final.py
       Escenarios: 1, 2, 3, 4, 5, 6
       Depende de: T-02
