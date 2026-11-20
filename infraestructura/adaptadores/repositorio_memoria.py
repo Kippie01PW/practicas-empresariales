@@ -1,12 +1,13 @@
-"""Adaptadores de persistencia en memoria para Práctica, ReglaPrograma, DocenteAsesor, RegistroHoras, TokenEvaluacion y Bitácora.
+"""Adaptadores de persistencia en memoria para Práctica, ReglaPrograma, DocenteAsesor, RegistroHoras, TokenEvaluacion, EvaluacionDesempeno y Bitácora.
 
-Traza: CU-01, CU-02, CU-03, CU-04, CU-05, CU-06, CU-12, EAC-01, EAC-02, EAC-03, RT-01, RN-01, ADR-001, ADR-002, ADR-003, ADR-004, ADR-006, ADR-007, ADR-010.
+Traza: CU-01, CU-02, CU-03, CU-04, CU-05, CU-06, CU-07, CU-12, EAC-01, EAC-02, EAC-03, RT-01, RN-01, RN-02, RN-03, RN-04, ADR-001, ADR-002, ADR-003, ADR-004, ADR-006, ADR-007, ADR-010.
 Vista Lógica §2, Vista de Desarrollo §2.
 
 Implementa los puertos `RepositorioPracticaPort`, `RepositorioReglaProgramaPort`,
-`RepositorioDocentePort`, `RepositorioRegistroHorasPort` y `RepositorioTokenEvaluacionPort`
-utilizando estructuras en memoria deterministas para pruebas y validación sin dependencias
-externas ni bases de datos reales en esta etapa (ADR-002, ADR-003, ADR-004).
+`RepositorioDocentePort`, `RepositorioRegistroHorasPort`, `RepositorioTokenEvaluacionPort`
+y `RepositorioEvaluacionDesempenoPort` utilizando estructuras en memoria deterministas
+para pruebas y validación sin dependencias externas ni bases de datos reales en esta etapa
+(ADR-002, ADR-003, ADR-004).
 """
 
 from __future__ import annotations
@@ -14,11 +15,15 @@ from __future__ import annotations
 from typing import Optional
 
 from aplicacion.puertos.repositorio_docente import RepositorioDocentePort
+from aplicacion.puertos.repositorio_evaluacion_desempeno import (
+    RepositorioEvaluacionDesempenoPort,
+)
 from aplicacion.puertos.repositorio_practica import RepositorioPracticaPort
 from aplicacion.puertos.repositorio_registro_horas import RepositorioRegistroHorasPort
 from aplicacion.puertos.repositorio_regla import RepositorioReglaProgramaPort
 from aplicacion.puertos.repositorio_token_evaluacion import RepositorioTokenEvaluacionPort
 from dominio.modelos.docente_asesor import DocenteAsesor
+from dominio.modelos.evaluacion_desempeno import EvaluacionDesempeno
 from dominio.modelos.evento_bitacora import EventoBitacora
 from dominio.modelos.intento_validacion import IntentoValidacion
 from dominio.modelos.practica import EstadoPractica, Practica
@@ -289,5 +294,52 @@ class InMemoryRepositorioTokenEvaluacion(RepositorioTokenEvaluacionPort):
         """Limpia los tokens almacenados (útil para pruebas)."""
         self._tokens_por_id.clear()
         self._tokens_por_str.clear()
+
+
+class InMemoryRepositorioEvaluacionDesempeno(RepositorioEvaluacionDesempenoPort):
+    """Implementación en memoria del puerto RepositorioEvaluacionDesempenoPort.
+
+    Traza: CU-07, EAC-01, EAC-03, RN-01, RN-02, RN-03, RN-04, ADR-002, ADR-003, ADR-010.
+
+    Almacena en memoria las instancias de EvaluacionDesempeno indexadas por id y
+    por practica_id, garantizando la relación 1 a 0..1 entre Practica y
+    EvaluacionDesempeno según el modelo de dominio (01-logica.puml).
+    """
+
+    def __init__(
+        self, evaluaciones_iniciales: Optional[list[EvaluacionDesempeno]] = None
+    ) -> None:
+        self._evaluaciones_por_id: dict[str, EvaluacionDesempeno] = {}
+        self._evaluaciones_por_practica: dict[str, EvaluacionDesempeno] = {}
+        if evaluaciones_iniciales:
+            for evaluacion in evaluaciones_iniciales:
+                self.guardar(evaluacion)
+
+    def guardar(self, evaluacion: EvaluacionDesempeno) -> None:
+        """Persiste o actualiza una evaluación de desempeño en el almacén en memoria."""
+        self._evaluaciones_por_id[evaluacion.id] = evaluacion
+        self._evaluaciones_por_practica[evaluacion.practica_id] = evaluacion
+
+    def buscar_por_id(self, evaluacion_id: str) -> Optional[EvaluacionDesempeno]:
+        """Busca y retorna una evaluación de desempeño por su identificador único."""
+        if not evaluacion_id:
+            return None
+        return self._evaluaciones_por_id.get(evaluacion_id.strip())
+
+    def buscar_por_practica(self, practica_id: str) -> Optional[EvaluacionDesempeno]:
+        """Busca si ya existe una evaluación de desempeño asociada a la práctica indicada."""
+        if not practica_id:
+            return None
+        return self._evaluaciones_por_practica.get(practica_id.strip())
+
+    def listar_todas(self) -> list[EvaluacionDesempeno]:
+        """Retorna todas las evaluaciones de desempeño almacenadas."""
+        return list(self._evaluaciones_por_id.values())
+
+    def limpiar(self) -> None:
+        """Limpia las evaluaciones almacenadas (útil para pruebas)."""
+        self._evaluaciones_por_id.clear()
+        self._evaluaciones_por_practica.clear()
+
 
 

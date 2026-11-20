@@ -35,7 +35,7 @@
       Escenarios: 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16
       Depende de: T-01, T-02, T-03, T-04, T-05, T-06
 
-- [ ] T-08 Implementar adaptador en memoria InMemoryRepositorioEvaluacionDesempeno
+- [X] T-08 Implementar adaptador en memoria InMemoryRepositorioEvaluacionDesempeno
       Archivos: infraestructura/adaptadores/repositorio_memoria.py
       Escenarios: 2, 3, 4, 12
       Depende de: T-02, T-05
