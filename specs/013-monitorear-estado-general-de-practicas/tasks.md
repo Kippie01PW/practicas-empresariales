@@ -5,7 +5,7 @@
       Escenarios: 1, 2, 3, 4, 6, 9, 10
       Depende de: ninguna
 
-- [ ] T-02 Extender puerto RepositorioPracticaPort declarando el contrato listar_todas para consulta consolidada
+- [X] T-02 Extender puerto RepositorioPracticaPort declarando el contrato listar_todas para consulta consolidada
       Archivos: aplicacion/puertos/repositorio_practica.py
       Escenarios: 1, 2, 3, 6, 9, 10
       Depende de: ninguna

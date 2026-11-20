@@ -1,6 +1,7 @@
 """Puerto de persistencia para la entidad Práctica, Intentos de Validación y Eventos de Bitácora.
 
-Traza: CU-01, EAC-02, ADR-001 (Resiliencia e integración asíncrona),
+Traza: CU-01, CU-06, CU-11, CU-13, EAC-01, EAC-02, EAC-03, RT-01, RN-01, RN-02,
+ADR-001 (Resiliencia e integración asíncrona),
 ADR-002 (Clean Architecture y Puertos y Adaptadores), ADR-003 (Persistencia transaccional),
 ADR-006 (Bitácora Append-Only), ADR-010 (Máquina de estados finitos), Vista Lógica §2.
 
@@ -100,6 +101,18 @@ class RepositorioPracticaPort(Protocol):
         Returns:
             Lista de instancias Practica cuyo tutor asignado coincide con el
             docente_asesor_id proporcionado.
+        """
+        ...
+
+    def listar_todas(self) -> list[Practica]:
+        """Retorna todas las prácticas registradas en el almacén de datos (CU-13, RT-01).
+
+        Utilizado en modo estrictamente de solo lectura por el monitoreo general
+        de prácticas para consolidar indicadores por estado del ciclo de vida y
+        restringir el listado al programa académico del coordinador autenticado.
+
+        Returns:
+            Lista con todas las instancias Practica almacenadas en orden determinista.
         """
         ...
 
