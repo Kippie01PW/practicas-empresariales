@@ -1,6 +1,6 @@
 """Entidad raíz Practica y enumeración EstadoPractica.
 
-Traza: CU-01, CU-02, CU-03, CU-04, CU-05, CU-07, ADR-010 (Máquina de Estados Finitos), ADR-007 (Reglas versionadas).
+Traza: CU-01, CU-02, CU-03, CU-04, CU-05, CU-07, CU-10, ADR-010 (Máquina de Estados Finitos), ADR-007 (Reglas versionadas).
 
 La entidad ``Practica`` encapsula el ciclo de vida completo de una práctica
 empresarial mediante una máquina de estados finitos interna.  Solo se exponen
@@ -16,10 +16,13 @@ from enum import Enum
 from typing import Optional
 
 from dominio.errores import (
+    ActaYaAprobadaPorActorError,
     DecisionPreviaEnFirmeError,
+    EstadoPracticaInvalidoParaAprobarActaError,
     EstadoPracticaInvalidoParaEvaluacionError,
     EstadoPracticaInvalidoParaRegistroHorasError,
     EstadoPracticaInvalidoParaValidarHorasError,
+    FaltaAprobacionDocentePreviaError,
     MotivoRechazoRequeridoError,
     PracticaYaEvaluadaError,
     PracticaYaTieneTutorAsignadoError,
@@ -355,7 +358,66 @@ class Practica:
         self._transicionar(EstadoPractica.EVALUADA)
         self._fecha_fin = fecha_fin or datetime.now()
 
+    def completar(
+        self,
+        acta_en_firme: bool = True,
+        fecha_fin: Optional[datetime] = None,
+    ) -> None:
+        """Transición formal de ``Evaluada`` a ``Completada`` al quedar el ActaFinal en firme.
+
+        Traza: CU-10, Escenarios 2, 3, 5 y 6, plan.md. ADR-010 (Máquina de estados finitos), RN-02.
+
+        Válida únicamente cuando la práctica se encuentra en estado ``Evaluada`` y el
+        ``ActaFinal`` cuenta con ambas aprobaciones electrónicas asentadas (``acta_en_firme=True``).
+
+        Args:
+            acta_en_firme: Indica si el ActaFinal cuenta con ambas firmas electrónicas
+                (DocenteAsesor y Coordinador de prácticas) asentadas en firme.
+            fecha_fin: Fecha y hora opcional de culminación oficial de la práctica.
+
+        Raises:
+            ActaYaAprobadaPorActorError: Si la práctica ya se encuentra en estado Completada.
+            EstadoPracticaInvalidoParaAprobarActaError: Si la práctica no se encuentra en estado Evaluada.
+            FaltaAprobacionDocentePreviaError: Si acta_en_firme es False.
+        """
+        if self._estado_actual == EstadoPractica.COMPLETADA:
+            raise ActaYaAprobadaPorActorError(
+                practica_id=self._id,
+                estado_actual=self._estado_actual.value,
+            )
+
+        if self._estado_actual != EstadoPractica.EVALUADA:
+            raise EstadoPracticaInvalidoParaAprobarActaError(
+                practica_id=self._id,
+                estado_actual=self._estado_actual.value,
+            )
+
+        if not acta_en_firme:
+            raise FaltaAprobacionDocentePreviaError(
+                practica_id=self._id,
+                docente_asesor_id=self._docente_asesor_id,
+            )
+
+        self._transicionar(EstadoPractica.COMPLETADA)
+        if fecha_fin is not None:
+            self._fecha_fin = fecha_fin
+        elif self._fecha_fin is None:
+            self._fecha_fin = datetime.now()
+
     # -- Consultas de dominio -----------------------------------------------
+
+    def puede_aprobar_acta(self) -> bool:
+        """Indica si la práctica se encuentra en el estado formal para aprobar electrónicamente el acta.
+
+        Traza: CU-10, Escenarios 1, 2 y 5, plan.md. ADR-010 (Máquina de estados finitos), RN-02.
+
+        Solo las prácticas que se encuentren formalmente en estado ``Evaluada``
+        admiten la aprobación electrónica del ``ActaFinal``.
+
+        Returns:
+            True si la práctica está en estado Evaluada; False en cualquier otro caso.
+        """
+        return self._estado_actual == EstadoPractica.EVALUADA
 
     def puede_evaluar_desempeno(self) -> bool:
         """Indica si la práctica se encuentra habilitada para registrar la evaluación de desempeño.

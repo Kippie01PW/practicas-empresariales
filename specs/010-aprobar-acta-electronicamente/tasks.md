@@ -10,7 +10,7 @@
       Escenarios: 1, 2, 3, 4, 6
       Depende de: T-01
 
-- [ ] T-03 Actualizar entidad Practica con consulta puede_aprobar_acta y transición formal Evaluada a Completada
+- [X] T-03 Actualizar entidad Practica con consulta puede_aprobar_acta y transición formal Evaluada a Completada
       Archivos: dominio/modelos/practica.py
       Escenarios: 2, 3, 5, 6
       Depende de: T-01
