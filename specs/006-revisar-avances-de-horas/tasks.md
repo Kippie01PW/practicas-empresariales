@@ -15,7 +15,7 @@
       Escenarios: 1, 2, 6, 7, 8, 9, 11, 12
       Depende de: ninguna
 
-- [ ] T-04 Implementar caso de uso RevisarAvancesHorasCasoUso en modo solo lectura con trazabilidad en bitácora
+- [X] T-04 Implementar caso de uso RevisarAvancesHorasCasoUso en modo solo lectura con trazabilidad en bitácora
       Archivos: aplicacion/casos_uso/revisar_avances_horas.py
       Escenarios: 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14
       Depende de: T-01, T-02, T-03
