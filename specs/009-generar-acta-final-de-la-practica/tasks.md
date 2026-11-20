@@ -35,7 +35,7 @@
       Escenarios: 1, 7, 8, 12
       Depende de: ninguna
 
-- [ ] T-08 Implementar caso de uso GenerarActaFinalCasoUso con verificación RBAC contextual, validación de máquina de estados, renderizado PDF con plantilla versionada, sellado SHA-256, compensación atómica y registro en bitácora
+- [X] T-08 Implementar caso de uso GenerarActaFinalCasoUso con verificación RBAC contextual, validación de máquina de estados, renderizado PDF con plantilla versionada, sellado SHA-256, compensación atómica y registro en bitácora
       Archivos: aplicacion/casos_uso/generar_acta_final.py
       Escenarios: 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12
       Depende de: T-01, T-02, T-03, T-04, T-05, T-06, T-07
