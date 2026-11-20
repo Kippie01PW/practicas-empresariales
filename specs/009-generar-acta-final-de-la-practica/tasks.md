@@ -55,7 +55,7 @@
       Escenarios: 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12
       Depende de: T-08, T-09, T-10
 
-- [ ] T-12 Validar todos los escenarios de spec.md y generar validacion.md
+- [X] T-12 Validar todos los escenarios de spec.md y generar validacion.md
       Archivos: specs/009-generar-acta-final-de-la-practica/validacion.md
       Escenarios: 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12
       Depende de: T-11
