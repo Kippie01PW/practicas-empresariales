@@ -5,7 +5,7 @@
       Escenarios: 3, 4, 5, 6
       Depende de: ninguna
 
-- [ ] T-02 Crear entidad de dominio ActaFinal con verificación de huella SHA-256 y aprobación secuencial por DocenteAsesor y Coordinador de prácticas
+- [X] T-02 Crear entidad de dominio ActaFinal con verificación de huella SHA-256 y aprobación secuencial por DocenteAsesor y Coordinador de prácticas
       Archivos: dominio/modelos/acta_final.py
       Escenarios: 1, 2, 3, 4, 6
       Depende de: T-01
