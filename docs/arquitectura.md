@@ -13,7 +13,7 @@ El sistema automatiza la gestión integral del ciclo de vida de prácticas empre
 Detalle: [Visión](vision.md)
 
 Funcionalidades: [Catálogo de casos de uso](drivers.md#1-lista-de-casos-de-uso) (CU-01 a CU-15), cada uno enlazado a su carpeta de `specs/`:
-- **Postulaciones y Asignación:** [CU-01](../specs/001-postulacion-estudiante/spec.md), [CU-02](../specs/002-aprobar-rechazar-postulacion/spec.md), [CU-03](../specs/003-asignar-docente-asesor/spec.md), CU-11.
+- **Postulaciones y Asignación:** [CU-01](../specs/001-postulacion-estudiante/spec.md), [CU-02](../specs/002-aprobar-rechazar-postulacion/spec.md), [CU-03](../specs/003-asignar-docente-asesor/spec.md), [CU-11](../specs/011-consultar-estado-del-tramite/spec.md).
 - **Seguimiento y Horas:** [CU-04](../specs/004-registrar-horas-practica/spec.md), [CU-05](../specs/005-validar-horas-registradas/spec.md), [CU-06](../specs/006-revisar-avances-de-horas/spec.md), [CU-08](../specs/008-enviar-recordatorios-plazos/spec.md).
 - **Evaluación de Desempeño:** [CU-07](../specs/007-evaluar-desempeno-del-practicante/spec.md).
 - **Cierre y Actas:** CU-09, [CU-10](../specs/010-aprobar-acta-electronicamente/spec.md).
