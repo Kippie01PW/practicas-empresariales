@@ -40,7 +40,7 @@
       Escenarios: 7, 8, 9
       Depende de: ninguna
 
-- [ ] T-09 Implementar caso de uso AprobarActaElectronicamenteCasoUso con validación RBAC contextual, verificación SHA-256, transición a Completada, liberación de cupo docente, bitácora y notificación
+- [X] T-09 Implementar caso de uso AprobarActaElectronicamenteCasoUso con validación RBAC contextual, verificación SHA-256, transición a Completada, liberación de cupo docente, bitácora y notificación
       Archivos: aplicacion/casos_uso/aprobar_acta_electronicamente.py
       Escenarios: 1, 2, 3, 4, 5, 6, 7, 8, 9
       Depende de: T-01, T-02, T-03, T-04, T-05, T-06, T-07, T-08
