@@ -15,7 +15,7 @@
       Escenarios: 1, 2, 3, 4, 5, 6, 11
       Depende de: T-01
 
-- [ ] T-04 Crear DTOs inmutables para comando de generación de acta, datos de renderizado de plantilla y respuesta de CU-09
+- [X] T-04 Crear DTOs inmutables para comando de generación de acta, datos de renderizado de plantilla y respuesta de CU-09
       Archivos: aplicacion/dtos/acta_final_dto.py
       Escenarios: 1, 6, 11
       Depende de: ninguna
