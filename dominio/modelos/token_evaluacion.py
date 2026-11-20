@@ -162,6 +162,25 @@ class TokenEvaluacion:
         self._usado = True
         self._fecha_uso = fecha_uso or datetime.now(timezone.utc)
 
+    def invalidar(self, fecha_invalidacion: Optional[datetime] = None) -> None:
+        """Invalida explícitamente el token al ser reemplazado o renovado por expiración.
+
+        Traza: CU-08, Escenarios 2, 3, 6 y 11, ADR-004, EAC-03.
+        Cuando la tarea de recordatorios emite un nuevo TokenEvaluacion para reemplazar
+        uno que superó los 15 días calendario de vigencia, este método deja el token
+        anterior explícitamente consumido/invalidado de forma idempotente para impedir
+        su uso futuro.
+
+        Args:
+            fecha_invalidacion: Instante de invalidación (default: datetime.now en UTC).
+        """
+        instante: datetime = fecha_invalidacion or datetime.now(timezone.utc)
+        if not self._usado:
+            self._usado = True
+            self._fecha_uso = instante
+        elif self._fecha_uso is None:
+            self._fecha_uso = instante
+
     # -- Representación e igualdad ------------------------------------------
 
     def __repr__(self) -> str:

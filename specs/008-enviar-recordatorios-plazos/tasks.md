@@ -5,7 +5,7 @@
       Escenarios: 7
       Depende de: ninguna
 
-- [ ] T-02 Extender entidad de dominio TokenEvaluacion con método de invalidación explícita al renovar enlaces expirados
+- [X] T-02 Extender entidad de dominio TokenEvaluacion con método de invalidación explícita al renovar enlaces expirados
       Archivos: dominio/modelos/token_evaluacion.py
       Escenarios: 2, 3, 6, 11
       Depende de: ninguna
