@@ -5,7 +5,7 @@
       Escenarios: 5, 6, 7, 8
       Depende de: ninguna
 
-- [ ] T-02 Ampliar entidad de dominio ReglaPrograma con validación de lista simple o diccionario de criterios, edición controlada en estado Borrador y transición formal a Activa
+- [X] T-02 Ampliar entidad de dominio ReglaPrograma con validación de lista simple o diccionario de criterios, edición controlada en estado Borrador y transición formal a Activa
       Archivos: dominio/modelos/regla_programa.py
       Escenarios: 1, 2, 3, 4, 5, 6, 8, 10
       Depende de: T-01
