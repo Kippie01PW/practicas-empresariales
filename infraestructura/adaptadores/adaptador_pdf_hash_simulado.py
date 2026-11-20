@@ -25,6 +25,7 @@ from aplicacion.dtos.acta_final_dto import (
     DatosRenderizadoActaDTO,
     ResultadoRenderizadoPdfDTO,
 )
+from aplicacion.dtos.consolidado_auditoria_dto import DatosRenderizadoConsolidadoPdfDTO
 from aplicacion.puertos.servicio_pdf_hash import ServicioPdfHashPort
 from dominio.errores import IntegridadActaInvalidaError
 
@@ -267,11 +268,19 @@ class AdaptadorPdfHashSimulado(ServicioPdfHashPort):
         html_renderizado: str,
     ) -> bytes:
         """Construye un documento binario PDF determinista a partir del HTML renderizado."""
-        cuerpo_pdf = (
-            "%PDF-1.4\n"
+        cabecera = (
             f"% ActaFinal: {datos.numero_acta}\n"
             f"% Practica: {datos.practica_id}\n"
             f"% Plantilla: {datos.plantilla_acta} (Version: {datos.version_regla})\n"
+        )
+        return self._empaquetar_pdf_generico(cabecera, html_renderizado)
+
+    @staticmethod
+    def _empaquetar_pdf_generico(cabecera_comentarios: str, html_renderizado: str) -> bytes:
+        """Empaqueta contenido HTML renderizado en un binario PDF-1.4 determinista."""
+        cuerpo_pdf = (
+            "%PDF-1.4\n"
+            f"{cabecera_comentarios}"
             "1 0 obj\n"
             "<< /Type /Catalog /Pages 2 0 R >>\n"
             "endobj\n"
@@ -290,4 +299,75 @@ class AdaptadorPdfHashSimulado(ServicioPdfHashPort):
             "%%EOF\n"
         )
         return cuerpo_pdf.encode("utf-8")
+
+    def generar_consolidado_auditoria_pdf(
+        self, datos: DatosRenderizadoConsolidadoPdfDTO
+    ) -> tuple[bytes, str]:
+        """Renderiza en PDF el consolidado histórico de prácticas y sus ActaFinal con sellado SHA-256 (CU-14)."""
+        html_renderizado = self._renderizar_consolidado_html(datos)
+        cabecera = (
+            f"% ConsolidadoAuditoria: {datos.programa_academico} ({datos.periodo})\n"
+            f"% TotalPracticas: {datos.total_practicas}\n"
+            f"% Actor: {datos.actor_id}\n"
+        )
+        contenido_pdf = self._empaquetar_pdf_generico(cabecera, html_renderizado)
+        hash_sha256 = self.calcular_hash_sha256(contenido_pdf)
+        return contenido_pdf, hash_sha256
+
+    def _renderizar_consolidado_html(
+        self, datos: DatosRenderizadoConsolidadoPdfDTO
+    ) -> str:
+        """Construye el HTML determinista del consolidado histórico de auditoría (CU-14)."""
+        rango_texto = (
+            f"{datos.fecha_inicio.isoformat() if datos.fecha_inicio else 'N/A'} a "
+            f"{datos.fecha_fin.isoformat() if datos.fecha_fin else 'N/A'}"
+        )
+        estado_texto = datos.estado_practica_filtro or "Todos"
+
+        if datos.total_practicas == 0:
+            cuerpo_registros = (
+                "  <p><strong>Aviso:</strong> No se encontraron registros históricos "
+                "para los criterios indicados.</p>\n"
+            )
+        else:
+            filas: list[str] = []
+            for reg in datos.registros:
+                acta_info = (
+                    f"Acta={reg.numero_acta}, Emisión={reg.fecha_emision_acta.isoformat() if reg.fecha_emision_acta else 'N/A'}, "
+                    f"Firmas(Docente={reg.aprobada_por_docente}, Coordinador={reg.aprobada_por_coordinador}, "
+                    f"EnFirme={reg.acta_en_firme}), SHA256={reg.hash_integridad_sha256}"
+                    if reg.numero_acta
+                    else "Sin ActaFinal emitida"
+                )
+                filas.append(
+                    f"    <li>Practica={reg.practica_id} | Estudiante={reg.estudiante_id} | "
+                    f"Estado={reg.estado_actual} | Docente={reg.docente_asesor_id or 'N/A'} "
+                    f"({reg.nombre_docente_asesor or 'N/A'}) | Supervisor={reg.supervisor_empresa_id or 'N/A'} | "
+                    f"Horas={reg.horas_acumuladas_aprobadas}/{reg.horas_requeridas or 'N/A'} | "
+                    f"Nota={reg.calificacion_cuantitativa if reg.calificacion_cuantitativa is not None else 'N/A'} | "
+                    f"{acta_info}</li>"
+                )
+            cuerpo_registros = "  <ul>\n" + "\n".join(filas) + "\n  </ul>\n"
+
+        return (
+            "<!DOCTYPE html>\n"
+            "<html lang=\"es\">\n"
+            "<head>\n"
+            "  <meta charset=\"UTF-8\">\n"
+            f"  <title>Consolidado de Auditoría - {datos.programa_academico} ({datos.periodo})</title>\n"
+            "</head>\n"
+            "<body>\n"
+            f"  <h1>CONSOLIDADO HISTÓRICO DE AUDITORÍA - {datos.programa_academico}</h1>\n"
+            f"  <p><strong>Período:</strong> {datos.periodo}</p>\n"
+            f"  <p><strong>Rango de Fechas:</strong> {rango_texto}</p>\n"
+            f"  <p><strong>Estado Filtrado:</strong> {estado_texto}</p>\n"
+            f"  <p><strong>Solicitado por:</strong> {datos.actor_id}</p>\n"
+            f"  <p><strong>Fecha de Generación:</strong> {datos.fecha_generacion.isoformat()}</p>\n"
+            f"  <p><strong>Total Prácticas:</strong> {datos.total_practicas} | "
+            f"<strong>Completadas:</strong> {datos.total_completadas} | "
+            f"<strong>Con Acta en Firme:</strong> {datos.total_con_acta_en_firme}</p>\n"
+            f"{cuerpo_registros}"
+            "</body>\n"
+            "</html>"
+        )
 

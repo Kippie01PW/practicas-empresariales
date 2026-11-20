@@ -30,7 +30,7 @@
       Escenarios: 1, 2, 3, 4, 5, 6
       Depende de: T-01, T-02, T-03, T-04, T-05
 
-- [ ] T-07 Implementar generar_consolidado_auditoria_pdf en el adaptador AdaptadorPdfHashSimulado
+- [X] T-07 Implementar generar_consolidado_auditoria_pdf en el adaptador AdaptadorPdfHashSimulado
       Archivos: infraestructura/adaptadores/adaptador_pdf_hash_simulado.py
       Escenarios: 1, 2, 3, 4
       Depende de: T-02, T-04
