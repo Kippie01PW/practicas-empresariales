@@ -93,3 +93,22 @@ class ServicioGeneradorActaPdfPort(Protocol):
             ruta_archivo_pdf: Ruta del archivo PDF a eliminar.
         """
         ...
+
+    def simular_acta_pdf_en_memoria(
+        self, datos: DatosRenderizadoActaDTO
+    ) -> ResultadoRenderizadoPdfDTO:
+        """Renderiza en memoria la plantilla HTML/CSS a un binario PDF de prueba sin persistir en el repositorio oficial (CU-12).
+
+        Permite al Coordinador de prácticas previsualizar el formato del ActaFinal, las horasRequeridas
+        y los criteriosRubrica de una ReglaPrograma en estado Borrador antes de activarla oficialmente,
+        sin escribir ningún archivo en el Repositorio de actas PDF ni alterar ninguna Práctica o ActaFinal
+        existente (Escenarios 3 y 10 de CU-12, ADR-007, ADR-008).
+
+        Args:
+            datos: DTO inmutable con los datos de simulación y la plantilla del borrador a renderizar.
+
+        Returns:
+            DTO inmutable ResultadoRenderizadoPdfDTO con contenido_pdf, hash_integridad_sha256 y
+            plantilla_utilizada generados exclusivamente en memoria.
+        """
+        ...

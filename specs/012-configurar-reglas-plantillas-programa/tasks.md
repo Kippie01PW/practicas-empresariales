@@ -20,7 +20,7 @@
       Escenarios: 1, 2, 3, 4, 7, 8, 10
       Depende de: T-02
 
-- [ ] T-05 Ampliar puerto ServicioGeneradorActaPdfPort con método simular_acta_pdf_en_memoria para previsualización de reglas en estado Borrador
+- [X] T-05 Ampliar puerto ServicioGeneradorActaPdfPort con método simular_acta_pdf_en_memoria para previsualización de reglas en estado Borrador
       Archivos: aplicacion/puertos/servicio_generador_acta_pdf.py
       Escenarios: 3, 10
       Depende de: ninguna
