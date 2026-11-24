@@ -1,6 +1,6 @@
 # Documento de arquitectura: Sistema de gestión de prácticas empresariales
 
-> Versión 1.0 | Estado: completo hasta SDD (la sección 9 conserva deuda técnica por registrar durante la implementación)
+> Versión 1.0 | Estado: **SDD 100% Completado** (Ciclo de desarrollo guiado por especificaciones finalizado: Fases 1 a 5 ejecutadas, implementadas en Clean Architecture y verificadas para la totalidad de CU-01 a CU-15).
 
 Este documento es el mapa del proyecto. Enlaza a los demás archivos y no los copia: un dato escrito en dos lugares termina diciendo dos cosas distintas. Su estructura es una adaptación de arc42.
 
@@ -12,12 +12,12 @@ El sistema automatiza la gestión integral del ciclo de vida de prácticas empre
 
 Detalle: [Visión](vision.md)
 
-Funcionalidades: [Catálogo de casos de uso](drivers.md#1-lista-de-casos-de-uso) (CU-01 a CU-15), cada uno enlazado a su carpeta de `specs/`:
+Funcionalidades: [Catálogo de casos de uso](drivers.md#1-lista-de-casos-de-uso) (CU-01 a CU-15), cada uno con ciclo SDD completo (`spec.md`, `plan.md`, `tasks.md`, `validacion.md`):
 - **Postulaciones y Asignación:** [CU-01](../specs/001-postulacion-estudiante/spec.md), [CU-02](../specs/002-aprobar-rechazar-postulacion/spec.md), [CU-03](../specs/003-asignar-docente-asesor/spec.md), [CU-11](../specs/011-consultar-estado-del-tramite/spec.md).
 - **Seguimiento y Horas:** [CU-04](../specs/004-registrar-horas-practica/spec.md), [CU-05](../specs/005-validar-horas-registradas/spec.md), [CU-06](../specs/006-revisar-avances-de-horas/spec.md), [CU-08](../specs/008-enviar-recordatorios-plazos/spec.md).
 - **Evaluación de Desempeño:** [CU-07](../specs/007-evaluar-desempeno-del-practicante/spec.md).
-- **Cierre y Actas:** CU-09, [CU-10](../specs/010-aprobar-acta-electronicamente/spec.md).
-- **Configuración, Auditoría y Migración:** CU-12, [CU-13](../specs/013-monitorear-estado-general-de-practicas/spec.md), CU-14, CU-15.
+- **Cierre y Actas:** [CU-09](../specs/009-generar-acta-final-de-la-practica/spec.md), [CU-10](../specs/010-aprobar-acta-electronicamente/spec.md).
+- **Configuración, Auditoría y Migración:** [CU-12](../specs/012-configurar-reglas-plantillas-programa/spec.md), [CU-13](../specs/013-monitorear-estado-general-de-practicas/spec.md), [CU-14](../specs/014-generar-consolidados-auditoria/spec.md), [CU-15](../specs/015-migrar-practicas-en-curso-desde-excel/spec.md).
 
 ---
 
@@ -131,9 +131,9 @@ Ninguna fila vacía: todo driver y todo ADR se ven en al menos una vista.
 
 | EAC | Atributo | Prioridad | ADR | Se verifica en |
 |-----|----------|-----------|-----|----------------|
-| **EAC-01** | Mantenibilidad (Modificabilidad) | Alta | ADR-002, ADR-007 | Modificación de regla/plantilla en menos de 16h-h afectando ≤ 2 componentes ([specs/012](../specs/012-configurar-reglas-programa/spec.md)) |
+| **EAC-01** | Mantenibilidad (Modificabilidad) | Alta | ADR-002, ADR-007 | Modificación de regla/plantilla en menos de 16h-h afectando ≤ 2 componentes ([specs/012](../specs/012-configurar-reglas-plantillas-programa/spec.md)) |
 | **EAC-02** | Fiabilidad (Tolerancia a fallos e interoperabilidad) | Alta | ADR-001, ADR-003 | 0% postulaciones perdidas con SIA caído, confirmación < 3s ([specs/001](../specs/001-postulacion-estudiante/spec.md), escenario 5) |
-| **EAC-03** | Seguridad (Confidencialidad y trazabilidad) | Alta | ADR-004, ADR-005, ADR-006 | 100% de accesos no válidos rechazados, 0 datos expuestos y registro en bitácora < 1 min ([specs/005](../specs/005-validar-horas-registradas/spec.md), [specs/007](../specs/007-evaluar-desempeno-supervisor/spec.md)) |
+| **EAC-03** | Seguridad (Confidencialidad y trazabilidad) | Alta | ADR-004, ADR-005, ADR-006 | 100% de accesos no válidos rechazados, 0 datos expuestos y registro en bitácora < 1 min ([specs/005](../specs/005-validar-horas-registradas/spec.md), [specs/007](../specs/007-evaluar-desempeno-del-practicante/spec.md)) |
 
 ---
 
