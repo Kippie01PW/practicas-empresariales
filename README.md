@@ -4,6 +4,8 @@ Repositorio de referencia del sistema para la gestión integral del ciclo de vid
 
 Muestra cómo queda el caso resuelto de extremo a extremo: desde la visión de negocio, requerimientos y drivers arquitectónicos hasta su especificación formal e implementación bajo **SDD (Spec-Driven Development)** con Clean Architecture y el patrón de Puertos y Adaptadores.
 
+> **Estado del desarrollo:** El ciclo **SDD (Spec-Driven Development) se encuentra 100% completado**. Los 15 casos de uso del sistema (`CU-01` a `CU-15`) han culminado exitosamente sus 5 fases: Especificación formal Gherkin (`spec.md`), Planeación arquitectónica (`plan.md`), Descomposición de micro-tareas (`tasks.md`), Implementación modular (`dominio/`, `aplicacion/`, `infraestructura/`) y Matriz de validación reproducible (`validacion.md`).
+
 ## Integrantes
 - Andrei Carro Flores
 - Marita Costilla
@@ -103,8 +105,11 @@ Los diagramas están escritos en PlantUML (`.puml`, texto versionable). Se puede
 
 ## Estado del proyecto
 
+> **Estado general:** **SDD (Spec-Driven Development) 100% Completado**. Se ejecutaron y cerraron las 5 fases metodológicas para los 15 casos de uso (`CU-01` a `CU-15`), asegurando trazabilidad matemática desde los objetivos de negocio y drivers hasta la suite de validación en memoria y Composition Root.
+
 | Componente / Dimensión | Estado | Cobertura y Detalle |
 |:---|:---:|:---|
+| **Metodología SDD (Fases 1 a 5)** | **100% Completado** | Las 5 fases (`spec.md`, `plan.md`, `tasks.md`, implementación en `src/` y `validacion.md`) culminadas al 100% para los 15 casos de uso (`CU-01` a `CU-15`). |
 | **Visión y Drivers** | **Completo** | Documento de visión ([vision.md](docs/vision.md)), objetivos OB-01 a OB-05, catálogo CU-01 a CU-15, EAC-01 a EAC-03 y restricciones en [drivers.md](docs/drivers.md). |
 | **Arquitectura arc42 y Vistas 4+1** | **Completo** | [docs/arquitectura.md](docs/arquitectura.md), vistas Lógica, Procesos, Desarrollo y Física, más 5 diagramas de secuencias críticas en [docs/diagramas/](docs/diagramas/). |
 | **Decisiones Arquitectónicas (ADRs)** | **Completo** | 10 decisiones registradas formalmente ([ADR-001 al ADR-010](docs/adr/)), sin pendientes abiertos. |
